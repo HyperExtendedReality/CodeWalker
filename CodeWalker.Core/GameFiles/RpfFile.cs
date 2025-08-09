@@ -36,8 +36,8 @@ namespace CodeWalker.GameFiles
         public RpfEncryption Encryption { get; set; }
 
         //object linkage
-        public List<RpfEntry> AllEntries { get; set; }
-        public List<RpfFile> Children { get; set; }
+        public List<RpfEntry> AllEntries { get; private set; }
+        public List<RpfFile> Children { get; private set; }
         public RpfFile Parent { get; set; }
         public RpfBinaryFileEntry ParentFileEntry { get; set; }
 
@@ -115,12 +115,12 @@ namespace CodeWalker.GameFiles
 
         public RpfFile GetTopParent()
         {
-            RpfFile pfile = this;
-            while (pfile.Parent != null)
+            RpfFile rpfile = this;
+            while (rpfile.Parent != null)
             {
-                pfile = pfile.Parent;
+                rpfile = rpfile.Parent;
             }
-            return pfile;
+            return rpfile;
         }
         
         public string GetPhysicalFilePath()
@@ -273,9 +273,86 @@ namespace CodeWalker.GameFiles
 
         }
 
+        /// Asynchronous version of ScanStructure. Accepts async status and error log callbacks.
+        public async Task ScanStructureAsync(Func<string, Task> updateStatus, Func<string, Task> errorLog)
+        {
+            using (var fs = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan))
+            using (var br = new BinaryReader(fs))
+            {
+                try
+                {
+                    await ScanStructureAsync(br, updateStatus, errorLog);
+                }
+                catch (Exception ex)
+                {
+                    LastError = ex.ToString();
+                    LastException = ex;
+                    if (errorLog != null)
+                        await errorLog(FilePath + ": " + LastError);
+                }
+            }
+        }
 
+        private async Task ScanStructureAsync(BinaryReader br, Func<string, Task> updateStatus, Func<string, Task> errorLog)
+        {
+            ReadHeader(br);
 
+            GrandTotalRpfCount = 1;
+            GrandTotalFileCount = 1;
+            GrandTotalFolderCount = 0;
+            GrandTotalResourceCount = 0;
+            GrandTotalBinaryFileCount = 0;
 
+            Children = new List<RpfFile>();
+
+            if (updateStatus != null)
+                await updateStatus($"Scanning {Path}...");
+
+            foreach (RpfEntry entry in AllEntries)
+            {
+                try
+                {
+                    if (entry is RpfBinaryFileEntry binentry)
+                    {
+                        var lname = binentry.NameLower;
+                        if (lname.EndsWith(".rpf") && IsValidPath(binentry.Path))
+                        {
+                            br.BaseStream.Position = StartPos + ((long)binentry.FileOffset * 512);
+                            long l = binentry.GetFileSize();
+                            RpfFile subfile = new RpfFile(binentry.Name, binentry.Path, l);
+                            subfile.Parent = this;
+                            subfile.ParentFileEntry = binentry;
+                            await subfile.ScanStructureAsync(br, updateStatus, errorLog);
+                            GrandTotalRpfCount += subfile.GrandTotalRpfCount;
+                            GrandTotalFileCount += subfile.GrandTotalFileCount;
+                            GrandTotalFolderCount += subfile.GrandTotalFolderCount;
+                            GrandTotalResourceCount += subfile.GrandTotalResourceCount;
+                            GrandTotalBinaryFileCount += subfile.GrandTotalBinaryFileCount;
+                            Children.Add(subfile);
+                        }
+                        else
+                        {
+                            GrandTotalBinaryFileCount++;
+                            GrandTotalFileCount++;
+                        }
+                    }
+                    else if (entry is RpfResourceFileEntry)
+                    {
+                        GrandTotalResourceCount++;
+                        GrandTotalFileCount++;
+                    }
+                    else if (entry is RpfDirectoryEntry)
+                    {
+                        GrandTotalFolderCount++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (errorLog != null)
+                        await errorLog(entry.Path + ": " + ex.ToString());
+                }
+            }
+        }
 
         public void ScanStructure(Action<string> updateStatus, Action<string> errorLog)
         {
@@ -2514,8 +2591,6 @@ namespace CodeWalker.GameFiles
             //var ss = ((flags >> 0) & 0xF);         // 4 bits - 0  - 3
             //var baseSize = 0x200 << (int)ss;
             //var size = baseSize * (s0 + s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8);
-
-
         }
         public static uint GetFlagsFromBlocks(uint blockCount, uint blockSize, uint version)
         {
