@@ -33,7 +33,7 @@ namespace CodeWalker.GameFiles
                 long val = 0;
                 if ((Textures != null) && (Textures.data_items != null))
                 {
-                    foreach (var tex in Textures.data_items)
+                    foreach (Texture tex in Textures.data_items)
                     {
                         if (tex != null)
                         {
@@ -81,7 +81,7 @@ namespace CodeWalker.GameFiles
 
             if (Textures?.data_items != null)
             {
-                foreach (var tex in Textures.data_items)
+                foreach (Texture tex in Textures.data_items)
                 {
                     YtdXml.OpenTag(sb, indent, "Item");
                     tex.WriteXml(sb, indent + 1, ddsfolder);
@@ -94,12 +94,12 @@ namespace CodeWalker.GameFiles
         {
             var textures = new List<Texture>();
 
-            var inodes = node.SelectNodes("Item");
+            XmlNodeList inodes = node.SelectNodes("Item");
             if (inodes != null)
             {
                 foreach (XmlNode inode in inodes)
                 {
-                    var tex = new Texture();
+                    Texture tex = new Texture();
                     tex.ReadXml(inode, ddsfolder);
                     textures.Add(tex);
                 }
@@ -155,8 +155,8 @@ namespace CodeWalker.GameFiles
             {
                 for (int i = 0; (i < Textures.data_items.Length) && (i < TextureNameHashes.data_items.Length); i++)
                 {
-                    var tex = Textures.data_items[i];
-                    var hash = TextureNameHashes.data_items[i];
+                    Texture tex = Textures.data_items[i];
+                    uint hash = TextureNameHashes.data_items[i];
                     dict[hash] = tex;
                 }
             }
@@ -168,7 +168,7 @@ namespace CodeWalker.GameFiles
             textures.Sort((a, b) => a.NameHash.CompareTo(b.NameHash));
             
             var texturehashes = new List<uint>();
-            foreach (var tex in textures)
+            foreach (Texture tex in textures)
             {
                 texturehashes.Add(tex.NameHash);
             }
@@ -187,9 +187,9 @@ namespace CodeWalker.GameFiles
             FileUnknown = 1;
 
             //make sure textures all have SRVs and are appropriately formatted for gen9
-            var texs = Textures?.data_items;
+            Texture[] texs = Textures?.data_items;
             if (texs == null) return;
-            foreach (var tex in texs)
+            foreach (Texture tex in texs)
             {
                 if (tex == null) continue;
                 tex.EnsureGen9();
@@ -663,7 +663,7 @@ namespace CodeWalker.GameFiles
             VFT = 0;
             Unknown_4h = 1;
 
-            var istex = this is Texture;
+            bool istex = this is Texture;
 
             Unknown_44h = istex ? 2 : 0u;
 
@@ -698,22 +698,22 @@ namespace CodeWalker.GameFiles
             if (Format == 0) return 0;
             var dxgifmt = DDSIO.GetDXGIFormat(Format);
             int div = 1;
-            int len = 0;
+            long len = 0;
             for (int i = 0; i < Levels; i++)
             {
-                var width = Width / div;
-                var height = Height / div;
-                DDSIO.DXTex.ComputePitch(dxgifmt, width, height, out var rowPitch, out var slicePitch, 0);
+                int width = Width / div;
+                int height = Height / div;
+                DDSIO.DXTex.ComputePitch(dxgifmt, width, height, out long rowPitch, out long slicePitch, 0);
                 len += slicePitch;
                 div *= 2;
             }
-            return len * Depth;
+            return (int)len * Depth;
         }
         public ushort CalculateStride()
         {
             if (Format == 0) return 0;
             var dxgifmt = DDSIO.GetDXGIFormat(Format);
-            DDSIO.DXTex.ComputePitch(dxgifmt, Width, Height, out var rowPitch, out var slicePitch, 0);
+            DDSIO.DXTex.ComputePitch(dxgifmt, Width, Height, out long rowPitch, out long slicePitch, 0);
             return (ushort)rowPitch;
         }
         public TextureFormat GetLegacyFormat(TextureFormatG9 format)
@@ -820,14 +820,14 @@ namespace CodeWalker.GameFiles
         {
             if (f == TextureFormatG9.UNKNOWN) return 0;
 
-            var bs = GetBlockStride(f);
-            var bp = GetBlockPixelCount(f);
-            var bw = (uint)width;
-            var bh = (uint)height;
-            var bd = (uint)depth;
-            var bm = (uint)mips;
+            uint bs = GetBlockStride(f);
+            uint bp = GetBlockPixelCount(f);
+            uint bw = (uint)width;
+            uint bh = (uint)height;
+            uint bd = (uint)depth;
+            uint bm = (uint)mips;
 
-            var align = 1u;// (bs == 1) ? 16u : 8u;
+            uint align = 1u;// (bs == 1) ? 16u : 8u;
             if (mips > 1)
             {
                 bw = 1; while (bw < width) bw *= 2;
@@ -835,11 +835,11 @@ namespace CodeWalker.GameFiles
                 bd = 1; while (bd < depth) bd *= 2;
             }
 
-            var bc = 0u;
+            uint bc = 0u;
             for (int i = 0; i < mips; i++)
             {
-                var bx = Math.Max(1, (bw + bp - 1) / bp);
-                var by = Math.Max(1, (bh + bp - 1) / bp);
+                uint bx = Math.Max(1, (bw + bp - 1) / bp);
+                uint by = Math.Max(1, (bh + bp - 1) / bp);
                 bx += (align - (bx % align)) % align;
                 by += (align - (by % align)) % align;
                 bc += bx * by * bd;
@@ -907,12 +907,12 @@ namespace CodeWalker.GameFiles
             
             if (reader.IsGen9)
             {
-                var unk50 = reader.ReadUInt64();//0
-                var srv58 = reader.ReadUInt64();//SRV embedded at offset 88 (base+8)
-                var srv60 = reader.ReadUInt64();
-                var srv68 = reader.ReadUInt64();
-                var srv70 = reader.ReadUInt64();
-                var unk78 = reader.ReadUInt64();//0
+                ulong unk50 = reader.ReadUInt64();//0
+                ulong srv58 = reader.ReadUInt64();//SRV embedded at offset 88 (base+8)
+                ulong srv60 = reader.ReadUInt64();
+                ulong srv68 = reader.ReadUInt64();
+                ulong srv70 = reader.ReadUInt64();
+                ulong unk78 = reader.ReadUInt64();//0
             }
             else
             {
@@ -996,8 +996,8 @@ namespace CodeWalker.GameFiles
                     {
                         Directory.CreateDirectory(ddsfolder);
                     }
-                    var filepath = Path.Combine(ddsfolder, (Name ?? "null") + ".dds");
-                    var dds = DDSIO.GetDDSFile(this);
+                    string filepath = Path.Combine(ddsfolder, (Name ?? "null") + ".dds");
+                    byte[] dds = DDSIO.GetDDSFile(this);
                     File.WriteAllBytes(filepath, dds);
                 }
             }
@@ -1010,18 +1010,18 @@ namespace CodeWalker.GameFiles
             Height = (ushort)Xml.GetChildUIntAttribute(node, "Height", "value");
             Levels = (byte)Xml.GetChildUIntAttribute(node, "MipLevels", "value");
             Format = Xml.GetChildEnumInnerText<TextureFormat>(node, "Format");
-            var filename = Xml.GetChildInnerText(node, "FileName");
+            string filename = Xml.GetChildInnerText(node, "FileName");
 
 
             if ((!string.IsNullOrEmpty(filename)) && (!string.IsNullOrEmpty(ddsfolder)))
             {
-                var filepath = Path.Combine(ddsfolder, filename);
+                string filepath = Path.Combine(ddsfolder, filename);
                 if (File.Exists(filepath))
                 {
                     try
                     {
-                        var dds = File.ReadAllBytes(filepath);
-                        var tex = DDSIO.GetTexture(dds);
+                        byte[] dds = File.ReadAllBytes(filepath);
+                        Texture tex = DDSIO.GetTexture(dds);
                         if (tex != null)
                         {
                             Data = tex.Data;
