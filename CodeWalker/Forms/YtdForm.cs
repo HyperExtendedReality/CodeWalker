@@ -135,7 +135,6 @@ namespace CodeWalker.Forms
             RemoveTextureButton.Enabled = true;
             ReplaceTextureButton.Enabled = true;
 
-
             if (mipchange)
             {
                 if (mip >= tex.Levels) mip = tex.Levels - 1;
@@ -148,22 +147,29 @@ namespace CodeWalker.Forms
             SelTextureNameTextBox.Text = tex.Name;
             DetailsPropertyGrid.SelectedObject = tex;
 
-
             try
             {
                 int cmip = Math.Min(Math.Max(mip, 0), tex.Levels - 1);
                 byte[] pixels = DDSIO.GetPixels(tex, cmip);
-                int w = tex.Width >> cmip;
-                int h = tex.Height >> cmip;
+                int w = Math.Max(1, tex.Width >> cmip);
+                int h = Math.Max(1, tex.Height >> cmip);
                 Bitmap bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb);
 
                 if (pixels != null)
                 {
+                    // Swap R and B channels for display
+                    for (int i = 0; i < pixels.Length; i += 4)
+                    {
+                        byte tmp = pixels[i]; // B
+                        pixels[i] = pixels[i + 2]; // R
+                        pixels[i + 2] = tmp; // B
+                    }
                     var BoundsRect = new System.Drawing.Rectangle(0, 0, w, h);
                     BitmapData bmpData = bmp.LockBits(BoundsRect, ImageLockMode.WriteOnly, bmp.PixelFormat);
                     IntPtr ptr = bmpData.Scan0;
                     int bytes = bmpData.Stride * bmp.Height;
-                    Marshal.Copy(pixels, 0, ptr, bytes);
+                    int copyBytes = Math.Min(bytes, pixels.Length);
+                    Marshal.Copy(pixels, 0, ptr, copyBytes);
                     bmp.UnlockBits(bmpData);
                 }
 
@@ -392,8 +398,8 @@ namespace CodeWalker.Forms
         private void UpdateZoom()
         {
             //update the image controls for the current zoom level
-
             var img = SelTexturePictureBox.Image;
+            if (img == null) return;
 
             if (CurrentZoom <= 0.0f)
             {
@@ -415,10 +421,7 @@ namespace CodeWalker.Forms
                 SelTexturePictureBox.Height = h;
                 SelTexturePanel.AutoScroll = true;
             }
-
         }
-
-
 
         private void UpdateSaveYTDAs()
         {
