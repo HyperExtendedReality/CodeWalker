@@ -1,8 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework>net6.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>CW.ico</ApplicationIcon>
@@ -16,9 +16,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DockPanelSuite.ThemeVS2015" Version="3.0.6" />
-    <PackageReference Include="FCTB" Version="2.16.24" />
-    <PackageReference Include="SharpDX" Version="4.2.0" />
+    <PackageReference Include="DockPanelSuite" Version="3.1.1" />
+	<PackageReference Include="System.Windows.Forms.DataVisualization" Version="1.0.0-prerelease.20110.1"/>
+	<PackageReference Include="FastColoredTextBox.Net6" Version="1.0.0" />
+	<PackageReference Include="SharpDX" Version="4.2.0" />
     <PackageReference Include="SharpDX.D3DCompiler" Version="4.2.0" />
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
