@@ -234,45 +234,8 @@ namespace CodeWalker
 
         public static DialogResult ShowDialogNew(this FolderBrowserDialog fbd)
         {
-            return ShowDialogNew(fbd, (IntPtr)0);
-        }
-        public static DialogResult ShowDialogNew(this FolderBrowserDialog fbd, IntPtr hWndOwner)
-        {
-            if (Environment.OSVersion.Version.Major >= 6)
-            {
-                var ofd = new OpenFileDialog();
-                ofd.Filter = "Folders|\n";
-                ofd.AddExtension = false;
-                ofd.CheckFileExists = false;
-                ofd.DereferenceLinks = true;
-                ofd.Multiselect = false;
-                ofd.InitialDirectory = fbd.SelectedPath;
-
-                int result = 0;
-                var ns = "System.Windows.Forms";
-                var asmb = Assembly.GetAssembly(typeof(OpenFileDialog));
-                var dialogint = GetType(asmb, ns, "FileDialogNative.IFileDialog");
-                var dialog = Call(typeof(OpenFileDialog), ofd, "CreateVistaDialog");
-                Call(typeof(OpenFileDialog), ofd, "OnBeforeVistaDialog", dialog);
-                var options = Convert.ToUInt32(Call(typeof(FileDialog), ofd, "GetOptions"));
-                options |= Convert.ToUInt32(GetEnumValue(asmb, ns, "FileDialogNative.FOS", "FOS_PICKFOLDERS"));
-                Call(dialogint, dialog, "SetOptions", options);
-                var pfde = New(asmb, ns, "FileDialog.VistaDialogEvents", ofd);
-                var parameters = new object[] { pfde, (uint)0 };
-                Call(dialogint, dialog, "Advise", parameters);
-                var adviseres = Convert.ToUInt32(parameters[1]);
-                try { result = Convert.ToInt32(Call(dialogint, dialog, "Show", hWndOwner)); }
-                finally { Call(dialogint, dialog, "Unadvise", adviseres); }
-                GC.KeepAlive(pfde);
-
-                fbd.SelectedPath = ofd.FileName;
-
-                return (result == 0) ? DialogResult.OK : DialogResult.Cancel;
-            }
-            else
-            {
-                return fbd.ShowDialog();
-            }
+            // Use the standard dialog for all OS versions in .NET 6+
+            return fbd.ShowDialog();
         }
 
 
@@ -283,10 +246,19 @@ namespace CodeWalker
             if (names.Length > 0)
             {
                 type = asmb.GetType(ns + "." + names[0]);
+                if (type == null)
+                {
+                    throw new InvalidOperationException($"Could not find type '{ns}.{names[0]}' in assembly '{asmb.FullName}'.");
+                }
             }
             for (int i = 1; i < names.Length; i++)
             {
-                type = type.GetNestedType(names[i], BindingFlags.NonPublic);
+                var nested = type?.GetNestedType(names[i], BindingFlags.NonPublic);
+                if (nested == null)
+                {
+                    throw new InvalidOperationException($"Could not find nested type '{names[i]}' in '{type?.FullName}'.");
+                }
+                type = nested;
             }
             return type;
         }
@@ -300,18 +272,26 @@ namespace CodeWalker
         {
             var type = GetType(asmb, ns, typeName);
             var fieldInfo = type.GetField(name);
+            if (fieldInfo == null)
+            {
+                throw new InvalidOperationException($"Could not find enum field '{name}' in type '{type.FullName}'.");
+            }
             return fieldInfo.GetValue(null);
         }
         private static object New(Assembly asmb, string ns, string name, params object[] parameters)
         {
             var type = GetType(asmb, ns, name);
             var ctorInfos = type.GetConstructors();
+            if (ctorInfos == null || ctorInfos.Length == 0)
+            {
+                throw new InvalidOperationException($"No constructors found for type '{type.FullName}'.");
+            }
             foreach (ConstructorInfo ci in ctorInfos)
             {
                 try { return ci.Invoke(parameters); }
                 catch { }
             }
-            return null;
+            throw new InvalidOperationException($"Could not invoke any constructor for type '{type.FullName}' with the provided parameters.");
         }
     }
 
