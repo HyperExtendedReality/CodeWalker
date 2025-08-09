@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -187,7 +188,7 @@ namespace CodeWalker
             }
 
 
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 try
                 {
@@ -199,7 +200,7 @@ namespace CodeWalker
                     return;
                 }
 
-                RefreshMainTreeView();
+                await RefreshMainTreeView();
 
                 UpdateStatus("Scan complete.");
 
@@ -713,7 +714,7 @@ namespace CodeWalker
 
 
 
-        private void RefreshMainTreeView()
+        private async Task RefreshMainTreeView()
         {
             Ready = false;
             AllRpfs = null;
@@ -728,7 +729,7 @@ namespace CodeWalker
             root.Name = "GTA V";
             RootFolder = root;
 
-            RefreshMainTreeViewRoot(root);
+            await RefreshMainTreeViewRoot(root);
 
 
             var remFolders = new List<MainTreeFolder>();
@@ -739,7 +740,7 @@ namespace CodeWalker
 
                 if (Directory.Exists(extraroot.FullPath))
                 {
-                    RefreshMainTreeViewRoot(extraroot, true);
+                    await RefreshMainTreeViewRoot(extraroot, true);
                 }
                 else
                 {
@@ -757,118 +758,121 @@ namespace CodeWalker
 
             MainTreeViewRefreshComplete();
         }
-        private void RefreshMainTreeViewRoot(MainTreeFolder f, bool extra = false)
+        private async Task RefreshMainTreeViewRoot(MainTreeFolder f, bool extra = false)
         {
-            var allRpfs = new List<RpfFile>();
-            var fullPath = f.FullPath;
-            var subPath = f.Path;
-            var allpaths = Directory.GetFileSystemEntries(fullPath, "*", SearchOption.AllDirectories);
-            var nodes = new Dictionary<string, MainTreeFolder>();
-
-            foreach (var path in allpaths)
+            await Task.Run(() =>
             {
-                var relpath = path.Replace(fullPath, "");
-                var filepathl = path.ToLowerInvariant();
+                var allRpfs = new List<RpfFile>();
+                var fullPath = f.FullPath;
+                var subPath = f.Path;
+                var allpaths = Directory.GetFileSystemEntries(fullPath, "*", SearchOption.AllDirectories);
+                var nodes = new Dictionary<string, MainTreeFolder>();
 
-                var isFile = File.Exists(path); //could be a folder
+                // Parallel scan for .rpf files
+                var rpfPaths = allpaths.Where(p => File.Exists(p) && p.ToLowerInvariant().EndsWith(".rpf")).ToList();
+                var rpfResults = new System.Collections.Concurrent.ConcurrentBag<(RpfFile rpf, string relpath, string path, MainTreeFolder node, MainTreeFolder parentnode)>();
 
-                UpdateStatus("Scanning " + relpath + "...");
-
-                MainTreeFolder parentnode = null, prevnode = null, node = null;
-                var prevnodepath = "";
-                var idx = isFile ? relpath.LastIndexOf('\\') : relpath.Length;
-                while (idx > 0) //create the folder tree nodes and build up the hierarchy
+                Parallel.ForEach(rpfPaths, rpfPath =>
                 {
-                    var parentpath = relpath.Substring(0, idx);
-                    var parentidx = parentpath.LastIndexOf('\\');
-                    var parentname = parentpath.Substring(parentidx + 1);
-                    var exists = nodes.TryGetValue(parentpath, out node);
-                    if (!exists)
-                    {
-                        node = CreateRootDirTreeFolder(parentname, subPath + parentpath, fullPath + parentpath);
-                        nodes[parentpath] = node;
-                    }
-                    if (parentnode == null)
-                    {
-                        parentnode = node;
-                    }
-                    if (prevnode != null)
-                    {
-                        node.AddChild(prevnode);
-                    }
-                    prevnode = node;
-                    prevnodepath = parentpath;
-                    idx = relpath.LastIndexOf('\\', idx - 1);
-                    if (exists) break;
-                    if (idx < 0)
-                    {
-                        f.AddChild(node);
-                    }
-                }
+                    var relpath = rpfPath.Replace(fullPath, "");
+                    RpfFile rpf = new RpfFile(rpfPath, relpath);
+                    rpf.ScanStructure(UpdateStatus, UpdateErrorLog);
+                    if (rpf.LastException != null) return;
+                    var node = CreateRpfTreeFolder(rpf, relpath, rpfPath);
+                    // parentnode is not set here, will be handled below
+                    rpfResults.Add((rpf, relpath, rpfPath, node, null));
+                });
 
-                if (isFile)
+                // Build folder tree nodes and add RPF nodes
+                foreach (var path in allpaths)
                 {
-                    if (filepathl.EndsWith(".rpf")) //add RPF nodes
+                    var relpath = path.Replace(fullPath, "");
+                    var filepathl = path.ToLowerInvariant();
+                    var isFile = File.Exists(path);
+                    UpdateStatus("Scanning " + relpath + "...");
+                    MainTreeFolder parentnode = null, prevnode = null, node = null;
+                    var prevnodepath = "";
+                    var idx = isFile ? relpath.LastIndexOf('\\') : relpath.Length;
+                    while (idx > 0)
                     {
-                        RpfFile rpf = new RpfFile(path, relpath);
-
-                        rpf.ScanStructure(UpdateStatus, UpdateErrorLog);
-
-                        if (rpf.LastException != null) //incase of corrupted rpf (or renamed NG encrypted RPF)
+                        var parentpath = relpath.Substring(0, idx);
+                        var parentidx = parentpath.LastIndexOf('\\');
+                        var parentname = parentpath.Substring(parentidx + 1);
+                        var exists = nodes.TryGetValue(parentpath, out node);
+                        if (!exists)
                         {
-                            continue;
+                            node = CreateRootDirTreeFolder(parentname, subPath + parentpath, fullPath + parentpath);
+                            nodes[parentpath] = node;
                         }
-
-                        if (extra)
+                        if (parentnode == null)
                         {
-                            relpath = path;
+                            parentnode = node;
                         }
-
-                        node = CreateRpfTreeFolder(rpf, relpath, path);
-
-                        RecurseMainTreeViewRPF(node, allRpfs, extra ? f.Path : null);
-
-                        if (parentnode != null)
+                        if (prevnode != null)
                         {
-                            parentnode.AddChild(node);
+                            node.AddChild(prevnode);
                         }
-                        else
+                        prevnode = node;
+                        prevnodepath = parentpath;
+                        idx = relpath.LastIndexOf('\\', idx - 1);
+                        if (exists) break;
+                        if (idx < 0)
                         {
                             f.AddChild(node);
                         }
                     }
-                    else
+
+                    if (isFile)
                     {
-                        if (parentnode != null)
+                        if (filepathl.EndsWith(".rpf"))
                         {
-                            parentnode.AddFile(path);
+                            // Find the node created in parallel scan
+                            var rpfResult = rpfResults.FirstOrDefault(r => r.relpath == relpath);
+                            if (rpfResult.rpf != null)
+                            {
+                                var rpfNode = rpfResult.node;
+                                RecurseMainTreeViewRPF(rpfNode, allRpfs, extra ? f.Path : null);
+                                if (parentnode != null)
+                                {
+                                    parentnode.AddChild(rpfNode);
+                                }
+                                else
+                                {
+                                    f.AddChild(rpfNode);
+                                }
+                            }
                         }
                         else
                         {
-                            f.AddFile(path);
+                            if (parentnode != null)
+                            {
+                                parentnode.AddFile(path);
+                            }
+                            else
+                            {
+                                f.AddFile(path);
+                            }
                         }
                     }
                 }
-            }
 
+                AddMainTreeViewRoot(f);
 
             AddMainTreeViewRoot(f);
-
-            if (f.Children != null)
-            {
-                f.Children.Sort((n1, n2) => n1.Name.CompareTo(n2.Name));
-
-                foreach (var node in f.Children)
+                if (f.Children != null)
                 {
-                    AddMainTreeViewNode(node);
+                    f.Children.Sort((n1, n2) => n1.Name.CompareTo(n2.Name));
+                    foreach (var node in f.Children)
+                    {
+                        AddMainTreeViewNode(node);
+                    }
                 }
-            }
 
-            if (AllRpfs == null)
-            {
-                AllRpfs = allRpfs;
-            }
-
+                if (AllRpfs == null)
+                {
+                    AllRpfs = allRpfs;
+                }
+            });
         }
         private void RecurseMainTreeViewRPF(MainTreeFolder f, List<RpfFile> allRpfs, string rootpath = null)
         {
@@ -2798,8 +2802,6 @@ namespace CodeWalker
 
             if (!EnsureCurrentFolderEditable()) return;
 
-            if (!EnsureRpfValidEncryption() && (CurrentFolder.RpfFolder != null)) return;
-
 
             OpenFileDialog.Filter = "FBX Files|*.fbx";
             if (OpenFileDialog.ShowDialog(this) != DialogResult.OK)
@@ -2894,7 +2896,6 @@ namespace CodeWalker
 
             if (!EnsureCurrentFolderEditable()) return;
 
-            if (!EnsureRpfValidEncryption() && (CurrentFolder.RpfFolder != null)) return;
 
             OpenFileDialog.Filter = "XML Files|*.xml";
             if (OpenFileDialog.ShowDialog(this) != DialogResult.OK) return;
@@ -3555,9 +3556,9 @@ namespace CodeWalker
             if (string.IsNullOrEmpty(folderPath)) return;
             if (!Directory.Exists(folderPath)) return;
 
-            foreach (var folder in ExtraRootFolders)
+            foreach (var extraroot in ExtraRootFolders)
             {
-                if (folder.FullPath == folderPath) return;
+                if (extraroot.FullPath == folderPath) return;
             }
 
             var root = new MainTreeFolder();
@@ -3567,9 +3568,9 @@ namespace CodeWalker
             root.IsExtraFolder = true;
             ExtraRootFolders.Add(root);
 
-            Task.Run(() =>
+            Task.Run(async () =>
             {
-                RefreshMainTreeViewRoot(root);
+                await RefreshMainTreeViewRoot(root);
 
                 Invoke(new Action(() => 
                 {
@@ -4136,9 +4137,9 @@ namespace CodeWalker
 
         private void RefreshButton_Click(object sender, EventArgs e)
         {
-            Task.Run(() =>
+            Task.Run(async () =>
             {
-                RefreshMainTreeView();
+                await RefreshMainTreeView();
 
                 UpdateStatus("Scan complete.");
             });
