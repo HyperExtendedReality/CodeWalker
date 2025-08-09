@@ -753,7 +753,7 @@ namespace CodeWalker.GameFiles
 
             Parallel.For(0, (stream.Length / BLOCK_LENGTH), (long k) => {
 
-                var hashProvider = new SHA1CryptoServiceProvider();
+                var hashProvider = SHA1.Create();
                 var buffer = new byte[length];
                 for (long i = 0; i < (BLOCK_LENGTH / ALIGN_LENGTH); i++)
                 {
