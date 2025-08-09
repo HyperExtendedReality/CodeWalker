@@ -3560,9 +3560,9 @@ namespace CodeWalker
             if (string.IsNullOrEmpty(folderPath)) return;
             if (!Directory.Exists(folderPath)) return;
 
-            foreach (var extraroot in ExtraRootFolders)
+            foreach (var folder in ExtraRootFolders)
             {
-                if (extraroot.FullPath == folderPath) return;
+                if (folder.FullPath == folderPath) return;
             }
 
             var root = new MainTreeFolder();
