@@ -169,7 +169,7 @@ namespace CodeWalker.GameFiles
             { } //empty the old queue out...
         }
 
-        public void Init(Action<string> updateStatus, Action<string> errorLog)
+        public async Task Init(Action<string> updateStatus, Action<string> errorLog)
         {
             UpdateStatus = updateStatus;
             ErrorLog = errorLog;
@@ -187,7 +187,7 @@ namespace CodeWalker.GameFiles
                 RpfMan.ExcludePaths = GetExcludePaths();
                 RpfMan.EnableMods = EnableMods;
                 RpfMan.BuildExtendedJenkIndex = BuildExtendedJenkIndex;
-                RpfMan.Init(GTAFolder, GTAGen9, UpdateStatus, ErrorLog);//, true);
+                await RpfMan.Init(GTAFolder, GTAGen9, UpdateStatus, ErrorLog);//, true);
 
 
                 InitGlobal();
