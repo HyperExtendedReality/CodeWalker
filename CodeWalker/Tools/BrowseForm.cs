@@ -113,7 +113,7 @@ namespace CodeWalker.Tools
             string searchpath = FolderTextBox.Text;
             string replpath = searchpath + "\\";
 
-            Task.Run(() =>
+            Task.Run(async() =>
             {
 
                 UpdateStatus("Starting scan...");
@@ -135,21 +135,24 @@ namespace CodeWalker.Tools
                         return;
                     }
 
-                    RpfFile rf = new RpfFile(rpfpath, rpfpath.Replace(replpath, ""));
+                    RpfFile rpf = new RpfFile(rpfpath, rpfpath.Replace(replpath, ""));
 
-                    UpdateStatus("Scanning " + rf.Name + "...");
+                    UpdateStatus("Scanning " + rpf.Name + "...");
 
-                    rf.ScanStructure(UpdateStatus, UpdateStatus);
+                    await rpf.ScanStructureAsync(
+                        msg => { UpdateStatus(msg); return Task.CompletedTask; },
+                        msg => { UpdateStatus(msg); return Task.CompletedTask; }
+                    );
 
-                    totrpfs += rf.GrandTotalRpfCount;
-                    totfiles += rf.GrandTotalFileCount;
-                    totfolders += rf.GrandTotalFolderCount;
-                    totresfiles += rf.GrandTotalResourceCount;
-                    totbinfiles += rf.GrandTotalBinaryFileCount;
+                    totrpfs += rpf.GrandTotalRpfCount;
+                    totfiles += rpf.GrandTotalFileCount;
+                    totfolders += rpf.GrandTotalFolderCount;
+                    totresfiles += rpf.GrandTotalResourceCount;
+                    totbinfiles += rpf.GrandTotalBinaryFileCount;
 
-                    AddScannedFile(rf, null, true);
+                    AddScannedFile(rpf, null, true);
 
-                    RootFiles.Add(rf);
+                    RootFiles.Add(rpf);
                 }
 
                 UpdateStatus(string.Format("Scan complete. {0} RPF files, {1} total files, {2} total folders, {3} resources, {4} binary files.", totrpfs, totfiles, totfolders, totresfiles, totbinfiles));

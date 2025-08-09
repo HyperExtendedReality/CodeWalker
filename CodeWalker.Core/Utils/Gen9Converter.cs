@@ -102,7 +102,7 @@ namespace CodeWalker.Core.Utils
             var singleFileProgress = 1.0f / allpaths.Length;
             var curFile = 0;
 
-            Task.Run(new Action(() =>
+            Task.Run(async() =>
             {
                 StartStop(true);
                 Log($"Conversion process started at {DateTime.Now}");
@@ -152,7 +152,10 @@ namespace CodeWalker.Core.Utils
 
                             //var rpflog = new Action<string>((str) => { });
                             var rpf = new RpfFile(outpath, relpath);
-                            rpf.ScanStructure(Log, Log);//rpflog
+                            await rpf.ScanStructureAsync(
+                                msg => { Log(msg); return Task.CompletedTask; },
+                                msg => { Log(msg); return Task.CompletedTask; }
+                            );//rpflog
 
                             //check if anything needs converting first?
                             //make sure to process child rpf's first!
@@ -261,7 +264,7 @@ namespace CodeWalker.Core.Utils
 
                 Log($"Conversion process completed at {DateTime.Now}");
                 StartStop(false);
-            }));
+            });
 
         }
 

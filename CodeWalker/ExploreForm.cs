@@ -760,7 +760,7 @@ namespace CodeWalker
         }
         private async Task RefreshMainTreeViewRoot(MainTreeFolder f, bool extra = false)
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 var allRpfs = new List<RpfFile>();
                 var fullPath = f.FullPath;
@@ -772,16 +772,18 @@ namespace CodeWalker
                 var rpfPaths = allpaths.Where(p => File.Exists(p) && p.ToLowerInvariant().EndsWith(".rpf")).ToList();
                 var rpfResults = new System.Collections.Concurrent.ConcurrentBag<(RpfFile rpf, string relpath, string path, MainTreeFolder node, MainTreeFolder parentnode)>();
 
-                Parallel.ForEach(rpfPaths, rpfPath =>
+                await Task.WhenAll(rpfPaths.Select(async rpfPath =>
                 {
                     var relpath = rpfPath.Replace(fullPath, "");
                     RpfFile rpf = new RpfFile(rpfPath, relpath);
-                    rpf.ScanStructure(UpdateStatus, UpdateErrorLog);
+                    await rpf.ScanStructureAsync(
+                        msg => { UpdateStatus(msg); return Task.CompletedTask; },
+                        msg => { UpdateErrorLog(msg); return Task.CompletedTask; }
+                    );
                     if (rpf.LastException != null) return;
                     var node = CreateRpfTreeFolder(rpf, relpath, rpfPath);
-                    // parentnode is not set here, will be handled below
                     rpfResults.Add((rpf, relpath, rpfPath, node, null));
-                });
+                }));
 
                 // Build folder tree nodes and add RPF nodes
                 foreach (var path in allpaths)
@@ -858,7 +860,6 @@ namespace CodeWalker
 
                 AddMainTreeViewRoot(f);
 
-            AddMainTreeViewRoot(f);
                 if (f.Children != null)
                 {
                     f.Children.Sort((n1, n2) => n1.Name.CompareTo(n2.Name));
@@ -2184,7 +2185,7 @@ namespace CodeWalker
 
             Cursor = Cursors.WaitCursor;
             CopyToModsFolderButton.Enabled = false;
-            Task.Run(() =>
+            Task.Run(async() =>
             {
                 try
                 {
@@ -2212,7 +2213,10 @@ namespace CodeWalker
 
                 var rpf = new RpfFile(destpath, newrelpath);
 
-                rpf.ScanStructure(UpdateStatus, UpdateErrorLog);
+                await rpf.ScanStructureAsync(
+                     msg => { UpdateStatus(msg); return Task.CompletedTask; },
+                     msg => { UpdateErrorLog(msg); return Task.CompletedTask; }
+                 );
 
                 if (rpf.LastException != null) //incase of corrupted rpf (or renamed NG encrypted RPF)
                 {

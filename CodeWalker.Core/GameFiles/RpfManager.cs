@@ -34,7 +34,7 @@ namespace CodeWalker.GameFiles
 
         public static bool IsGen9 { get; set; } //not ideal for this to be static, but it's most convenient for ResourceData
 
-        public void Init(string folder, bool gen9, Action<string> updateStatus, Action<string> errorLog, bool rootOnly = false, bool buildIndex = true)
+        public async Task Init(string folder, bool gen9, Action<string> updateStatus, Action<string> errorLog, bool rootOnly = false, bool buildIndex = true)
         {
             UpdateStatus = updateStatus;
             ErrorLog = errorLog;
@@ -59,14 +59,14 @@ namespace CodeWalker.GameFiles
             {
                 try
                 {
-                    RpfFile rf = new RpfFile(rpfpath, rpfpath.Replace(replpath, ""));
+                    RpfFile rpf = new RpfFile(rpfpath, rpfpath.Replace(replpath, ""));
 
                     if (ExcludePaths != null)
                     {
                         bool excl = false;
                         for (int i = 0; i < ExcludePaths.Length; i++)
                         {
-                            if (rf.Path.StartsWith(ExcludePaths[i]))
+                            if (rpf.Path.StartsWith(ExcludePaths[i]))
                             {
                                 excl = true;
                                 break;
@@ -75,14 +75,18 @@ namespace CodeWalker.GameFiles
                         if (excl) continue; //skip files in exclude paths.
                     }
 
-                    rf.ScanStructure(updateStatus, errorLog);
+                    await rpf.ScanStructureAsync(
+                        msg => { updateStatus(msg); return Task.CompletedTask; },
+                        msg => { errorLog(msg); return Task.CompletedTask; }
+                    );
 
-                    if (rf.LastException != null) //incase of corrupted rpf (or renamed NG encrypted RPF)
+
+                    if (rpf.LastException != null) //incase of corrupted rpf (or renamed NG encrypted RPF)
                     {
                         continue;
                     }
 
-                    AddRpfFile(rf, false, false);
+                    AddRpfFile(rpf, false, false);
                 }
                 catch (Exception ex)
                 {

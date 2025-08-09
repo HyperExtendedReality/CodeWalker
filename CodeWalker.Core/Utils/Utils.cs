@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using SharpDX;
+using Half = SharpDX.Half;
 using Color = SharpDX.Color;
 
 namespace CodeWalker
