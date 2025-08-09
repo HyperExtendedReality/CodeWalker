@@ -81,10 +81,6 @@ namespace CodeWalker.Utils
                 height = Math.Max(1, height / 2);
             }
             int clampedMipCount = Math.Min(texture.Levels, actualMipCount);
-            if (clampedMipCount == 0) throw new Exception("Texture data is too small for even one mip level.");
-
-            if (mip < 0 || mip >= clampedMipCount)
-                throw new Exception($"Requested mip {mip} is not present in texture data (available mips: {clampedMipCount}).");
 
             // Create a full DDS in memory for only the available mips
             using var stream = new MemoryStream();
@@ -93,38 +89,24 @@ namespace CodeWalker.Utils
             var ddsBytes = stream.ToArray();
             fixed (byte* ptr = ddsBytes)
             {
-                try
+                using var image = TexHelper.Instance.LoadFromDDSMemory((IntPtr)ptr, ddsBytes.Length, DDS_FLAGS.NONE);
+                int mipCount = (int)image.GetMetadata().MipLevels;
+                int safeMip = Math.Min(Math.Max(mip, 0), mipCount - 1);
+                if (format == DXGI_FORMAT.R8G8B8A8_UNORM || format == DXGI_FORMAT.B8G8R8A8_UNORM)
                 {
-                    using var image = TexHelper.Instance.LoadFromDDSMemory((IntPtr)ptr, ddsBytes.Length, DDS_FLAGS.NONE);
-                    int mipCount = (int)image.GetMetadata().MipLevels;
-                    int safeMip = Math.Min(Math.Max(mip, 0), mipCount - 1);
-                    if (format == DXGI_FORMAT.R8G8B8A8_UNORM || format == DXGI_FORMAT.B8G8R8A8_UNORM)
-                    {
-                        return ExtractPixels(image.GetImage(safeMip));
-                    }
-                    if (IsCompressedFormat(format))
-                    {
-                        using var decompressed = image.Decompress(DXGI_FORMAT.R8G8B8A8_UNORM);
-                        int decMipCount = (int)decompressed.GetMetadata().MipLevels;
-                        int decSafeMip = Math.Min(Math.Max(mip, 0), decMipCount - 1);
-                        return ExtractPixels(decompressed.GetImage(decSafeMip));
-                    }
-                    using var converted = image.Convert(DXGI_FORMAT.R8G8B8A8_UNORM, TEX_FILTER_FLAGS.DEFAULT, 0.5f);
-                    int convMipCount = (int)converted.GetMetadata().MipLevels;
-                    int convSafeMip = Math.Min(Math.Max(mip, 0), convMipCount - 1);
-                    return ExtractPixels(converted.GetImage(convSafeMip));
+                    return ExtractPixels(image.GetImage(safeMip));
                 }
-                catch (Exception ex)
+                if (IsCompressedFormat(format))
                 {
-                    // Diagnostic: save the DDS file to disk for inspection
-                    try
-                    {
-                        var diagPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), $"diag_{texture?.Name ?? "unknown"}_{format}_mip{mip}.dds");
-                        File.WriteAllBytes(diagPath, ddsBytes);
-                    }
-                    catch { /* ignore secondary errors */ }
-                    throw new Exception($"DDSIO.GetPixels failed for mip {mip} (format {format}, tex {texture?.Name ?? "unknown"}): {ex.Message}. DDS file saved to Desktop for inspection.", ex);
+                    using var decompressed = image.Decompress(DXGI_FORMAT.R8G8B8A8_UNORM);
+                    int decMipCount = (int)decompressed.GetMetadata().MipLevels;
+                    int decSafeMip = Math.Min(Math.Max(mip, 0), decMipCount - 1);
+                    return ExtractPixels(decompressed.GetImage(decSafeMip));
                 }
+                using var converted = image.Convert(DXGI_FORMAT.R8G8B8A8_UNORM, TEX_FILTER_FLAGS.DEFAULT, 0.5f);
+                int convMipCount = (int)converted.GetMetadata().MipLevels;
+                int convSafeMip = Math.Min(Math.Max(mip, 0), convMipCount - 1);
+                return ExtractPixels(converted.GetImage(convSafeMip));
             }
         }
 
@@ -171,7 +153,6 @@ namespace CodeWalker.Utils
                 height = Math.Max(1, height / 2);
             }
             int clampedMipCount = Math.Min(texture.Levels, actualMipCount);
-            if (clampedMipCount == 0) throw new Exception("Texture data is too small for even one mip level.");
 
             using var stream = new MemoryStream();
             WriteDDSHeader(stream, format, texture.Width, texture.Height, clampedMipCount, texture.Depth, isCubemap);
