@@ -2678,132 +2678,46 @@ namespace CodeWalker.GameFiles
 
 
 
-        public DrawableBase TryGetDrawable(Archetype arche)
+        public Task<(DrawableBase drawable, bool waitingForLoad)> TryGetDrawableAsync(Archetype arche)
         {
-            if (arche == null) return null;
-            uint drawhash = arche.Hash;
-            DrawableBase drawable = null;
-            if ((arche.DrawableDict != 0))// && (arche.DrawableDict != arche.Hash))
+            return Task.Run(() =>
             {
-                //try get drawable from ydd...
-                YddFile ydd = GetYdd(arche.DrawableDict);
-                if (ydd != null)
+                if (arche == null) return ((DrawableBase)null, false);
+
+                uint drawhash = arche.Hash;
+
+                if (arche.DrawableDict != 0)
                 {
-                    if (ydd.Loaded && (ydd.Dict != null))
+                    YddFile ydd = GetYdd(arche.DrawableDict);
+                    if (ydd != null)
                     {
-                        Drawable d;
-                        ydd.Dict.TryGetValue(drawhash, out d); //can't out to base class?
-                        drawable = d;
-                        if (drawable == null)
+                        if (!ydd.Loaded) return (null, true);
+                        if (ydd.Dict != null && ydd.Dict.TryGetValue(drawhash, out Drawable d))
                         {
-                            return null; //drawable wasn't in dict!!
+                            return (d, false);
                         }
                     }
-                    else
-                    {
-                        return null; //ydd not loaded yet, or has no dict
-                    }
                 }
-                else
-                {
-                    //return null; //couldn't find drawable dict... quit now?
-                }
-            }
-            if (drawable == null)
-            {
-                //try get drawable from ydr.
+
                 YdrFile ydr = GetYdr(drawhash);
                 if (ydr != null)
                 {
-                    if (ydr.Loaded)
-                    {
-                        drawable = ydr.Drawable;
-                    }
+                    if (!ydr.Loaded) return (null, true);
+                    return (ydr.Drawable, false);
                 }
-                else
-                {
-                    YftFile yft = GetYft(drawhash);
-                    if (yft != null)
-                    {
-                        if (yft.Loaded)
-                        {
-                            if (yft.Fragment != null)
-                            {
-                                drawable = yft.Fragment.Drawable;
-                            }
-                        }
-                    }
-                }
-            }
 
-            return drawable;
-        }
-
-        public async Task<(DrawableBase drawable, bool waitingForLoad)> TryGetDrawableAsync(Archetype arche)
-        {
-            bool waitingForLoad = false;
-            if (arche == null) return (null, false);
-
-            uint drawhash = arche.Hash;
-            DrawableBase drawable = null;
-
-            // Run Ydd, Ydr, and Yft parts in parallel
-            var yddTask = Task.Run(() => TryGetDrawableFromYdd(arche, drawhash, ref drawable));
-            var ydrTask = Task.Run(() => TryGetDrawableFromYdr(drawhash, ref drawable));
-            var yftTask = Task.Run(() => TryGetDrawableFromYft(drawhash, ref drawable));
-
-            // Wait for any of them to complete
-            await Task.WhenAny(yddTask, ydrTask, yftTask);
-
-            // After any task completes, check if drawable is loaded or if we are still waiting
-            if (drawable != null) return (drawable, waitingForLoad);
-
-            // If all tasks are still running, check their load status
-            if (yddTask.Status != TaskStatus.RanToCompletion || ydrTask.Status != TaskStatus.RanToCompletion || yftTask.Status != TaskStatus.RanToCompletion)
-            {
-                waitingForLoad = true;
-                return (null, true); // Not ready yet, return early
-            }
-
-            return (drawable, waitingForLoad);
-        }
-
-        // Helper functions for Ydd, Ydr, and Yft
-
-        private void TryGetDrawableFromYdd(Archetype arche, uint drawhash, ref DrawableBase drawable)
-        {
-            if (arche.DrawableDict != 0)
-            {
-                YddFile ydd = GetYdd(arche.DrawableDict);
-                if (ydd != null && ydd.Loaded && ydd.Dict != null && ydd.Dict.TryGetValue(drawhash, out Drawable d))
-                {
-                    drawable = d;
-                }
-            }
-        }
-
-        private void TryGetDrawableFromYdr(uint drawhash, ref DrawableBase drawable)
-        {
-            if (drawable == null)
-            {
-                YdrFile ydr = GetYdr(drawhash);
-                if (ydr != null && ydr.Loaded)
-                {
-                    drawable = ydr.Drawable;
-                }
-            }
-        }
-
-        private void TryGetDrawableFromYft(uint drawhash, ref DrawableBase drawable)
-        {
-            if (drawable == null)
-            {
                 YftFile yft = GetYft(drawhash);
-                if (yft != null && yft.Loaded)
+                if (yft != null)
                 {
-                    drawable = yft.Fragment?.Drawable;
+                    if (!yft.Loaded) return (null, true);
+                    if (yft.Fragment != null)
+                    {
+                        return (yft.Fragment.Drawable, false);
+                    }
                 }
-            }
+
+                return ((DrawableBase)null, false);
+            });
         }
 
 

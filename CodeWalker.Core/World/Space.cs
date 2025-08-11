@@ -1356,7 +1356,7 @@ namespace CodeWalker.World
             var res = new SpaceRayIntersectResult();
             res.HitDist = maxdist;
 
-            var drawable = GameFileCache.TryGetDrawable(ent.Archetype);
+            var (drawable, _) = GameFileCache.TryGetDrawableAsync(ent.Archetype).Result;
             if (drawable != null)
             {
                 var eori = ent.Orientation;
@@ -1596,7 +1596,7 @@ namespace CodeWalker.World
         {
             var res = new SpaceSphereIntersectResult();
 
-            var drawable = GameFileCache.TryGetDrawable(ent.Archetype);
+            var (drawable, _) = GameFileCache.TryGetDrawableAsync(ent.Archetype).Result;
             if (drawable != null)
             {
                 var eori = ent.Orientation;

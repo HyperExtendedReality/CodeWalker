@@ -1702,7 +1702,7 @@ namespace CodeWalker.Rendering
 
                     if (Math.Max(camera.Position.Z, 0.0f) < layer.HeightTigger) continue;
 
-                    var drw = gameFileCache.TryGetDrawable(arch);
+                    var (drw, _) = gameFileCache.TryGetDrawableAsync(arch).Result;
                     var rnd = TryGetRenderable(arch, drw);
 
                     if ((rnd == null) || (rnd.IsLoaded == false) || (rnd.AllTexturesLoaded == false))
@@ -2098,7 +2098,7 @@ namespace CodeWalker.Rendering
                     var ent = renderworldentities[i];
                     var arch = ent.Archetype;
                     var pent = ent.Parent;
-                    var drawable = gameFileCache.TryGetDrawable(arch);
+                    var (drawable, _) = gameFileCache.TryGetDrawableAsync(arch).Result;
                     Renderable rndbl = TryGetRenderable(arch, drawable);
                     if ((rndbl != null) && rndbl.IsLoaded && (rndbl.AllTexturesLoaded || !waitforchildrentoload))
                     {
@@ -2508,7 +2508,7 @@ namespace CodeWalker.Rendering
             Renderable rndbl = null;
             if (!ArchetypeRenderables.TryGetValue(arch, out rndbl))
             {
-                var drawable = gameFileCache.TryGetDrawable(arch);
+                var (drawable, _) = gameFileCache.TryGetDrawableAsync(arch).Result;
                 rndbl = TryGetRenderable(arch, drawable);
                 ArchetypeRenderables[arch] = rndbl;
             }
@@ -2691,7 +2691,7 @@ namespace CodeWalker.Rendering
                 }
 
                 var arch = batch.Archetype;
-                var drbl = gameFileCache.TryGetDrawable(arch);
+                var (drbl, _) = gameFileCache.TryGetDrawableAsync(arch).Result;
                 var rndbl = TryGetRenderable(arch, drbl);
                 var instb = renderableCache.GetRenderableInstanceBatch(batch);
                 if (rndbl == null) continue; //no renderable
@@ -3136,7 +3136,7 @@ namespace CodeWalker.Rendering
             bool res = false;
             if (rndbl == null)
             {
-                var drawable = gameFileCache.TryGetDrawable(arche);
+                var (drawable, _) = gameFileCache.TryGetDrawableAsync(arche).Result;
                 rndbl = TryGetRenderable(arche, drawable);
             }
 
