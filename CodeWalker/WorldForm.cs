@@ -1146,7 +1146,7 @@ namespace CodeWalker
 
             if ((selarch != null) && (seldrwbl == null))
             {
-                seldrwbl = gameFileCache.TryGetDrawable(selarch);
+                (seldrwbl, _) = gameFileCache.TryGetDrawableAsync(selarch).Result;
             }
 
             //select this item for viewing by the UI...
@@ -3472,7 +3472,7 @@ namespace CodeWalker
             }
             if ((mhitv.Archetype != null) && (mhitv.Drawable == null))
             {
-                mhitv.Drawable = gameFileCache.TryGetDrawable(mhitv.Archetype); //no drawable given.. try to get it from the cache.. if it's not there, drawable info won't display...
+                (mhitv.Drawable, _) = gameFileCache.TryGetDrawableAsync(mhitv.Archetype).Result; //no drawable given.. try to get it from the cache.. if it's not there, drawable info won't display...
             }
 
             var oldnode = SelectedItem.PathNode;
