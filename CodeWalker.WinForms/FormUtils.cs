@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -234,65 +235,31 @@ namespace CodeWalker
 
         public static DialogResult ShowDialogNew(this FolderBrowserDialog fbd)
         {
-            // Use the standard dialog for all OS versions in .NET 6+
-            return fbd.ShowDialog();
+            using (var dialog = new OpenFileDialog())
+            {
+                dialog.Title = fbd.Description;
+                if (!string.IsNullOrEmpty(fbd.SelectedPath))
+                {
+                    dialog.InitialDirectory = fbd.SelectedPath;
+                }
+
+                dialog.FileName = "Select Folder";
+                dialog.Filter = "Folder|.";
+                dialog.ValidateNames = false;
+                dialog.CheckFileExists = false;
+                dialog.CheckPathExists = true;
+
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    string path = Path.GetDirectoryName(dialog.FileName);
+                    fbd.SelectedPath = path;
+                    return DialogResult.OK;
+                }
+            }
+            return DialogResult.Cancel;
         }
 
 
-        private static Type GetType(Assembly asmb, string ns, string name)
-        {
-            Type type = null;
-            string[] names = name.Split('.');
-            if (names.Length > 0)
-            {
-                type = asmb.GetType(ns + "." + names[0]);
-                if (type == null)
-                {
-                    throw new InvalidOperationException($"Could not find type '{ns}.{names[0]}' in assembly '{asmb.FullName}'.");
-                }
-            }
-            for (int i = 1; i < names.Length; i++)
-            {
-                var nested = type?.GetNestedType(names[i], BindingFlags.NonPublic);
-                if (nested == null)
-                {
-                    throw new InvalidOperationException($"Could not find nested type '{names[i]}' in '{type?.FullName}'.");
-                }
-                type = nested;
-            }
-            return type;
-        }
-        private static object Call(Type type, object obj, string func, params object[] parameters)
-        {
-            var mi = type.GetMethod(func, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (mi == null) return null;
-            return mi.Invoke(obj, parameters);
-        }
-        private static object GetEnumValue(Assembly asmb, string ns, string typeName, string name)
-        {
-            var type = GetType(asmb, ns, typeName);
-            var fieldInfo = type.GetField(name);
-            if (fieldInfo == null)
-            {
-                throw new InvalidOperationException($"Could not find enum field '{name}' in type '{type.FullName}'.");
-            }
-            return fieldInfo.GetValue(null);
-        }
-        private static object New(Assembly asmb, string ns, string name, params object[] parameters)
-        {
-            var type = GetType(asmb, ns, name);
-            var ctorInfos = type.GetConstructors();
-            if (ctorInfos == null || ctorInfos.Length == 0)
-            {
-                throw new InvalidOperationException($"No constructors found for type '{type.FullName}'.");
-            }
-            foreach (ConstructorInfo ci in ctorInfos)
-            {
-                try { return ci.Invoke(parameters); }
-                catch { }
-            }
-            throw new InvalidOperationException($"Could not invoke any constructor for type '{type.FullName}' with the provided parameters.");
-        }
     }
 
 
