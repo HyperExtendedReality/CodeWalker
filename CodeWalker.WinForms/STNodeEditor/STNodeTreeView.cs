@@ -48,6 +48,7 @@ namespace ST.Library.UI.NodeEditor
         /// Get or set the background color of each row attribute option
         /// </summary>
         [Description("Get or set the background color of each row attribute option")]
+        [DefaultValue(typeof(Color), "45, 45, 45")]
         public Color ItemBackColor {
             get { return _ItemBackColor; }
             set {
@@ -60,6 +61,7 @@ namespace ST.Library.UI.NodeEditor
         /// Gets or sets the background color when the property option is hovered by the mouse
         /// </summary>
         [Description("Get or set the background color when the property option is hovered by the mouse")]
+        [DefaultValue(typeof(Color), "50, 125, 125, 125")]
         public Color ItemHoverColor {
             get { return _ItemHoverColor; }
             set { _ItemHoverColor = value; }
@@ -70,6 +72,7 @@ namespace ST.Library.UI.NodeEditor
         /// Get or set the background color of the top retrieval area
         /// </summary>
         [Description("Get or set the background color of the top retrieval area")]
+        [DefaultValue(typeof(Color), "60, 60, 60")]
         public Color TitleColor {
             get { return _TitleColor; }
             set {
@@ -82,6 +85,7 @@ namespace ST.Library.UI.NodeEditor
         /// Gets or sets the background color of the search text box
         /// </summary>
         [Description("Get or set the background color of the search text box")]
+        [DefaultValue(typeof(Color), "30, 30, 30")]
         public Color TextBoxColor {
             get { return m_tbx.BackColor; }
             set {
@@ -115,6 +119,7 @@ namespace ST.Library.UI.NodeEditor
         /// Get or set the text color of the count
         /// </summary>
         [Description("Get or set the text color of statistics")]
+        [DefaultValue(typeof(Color), "40, 255, 255, 255")]
         public Color FolderCountColor {
             get { return _FolderCountColor; }
             set { _FolderCountColor = value; }

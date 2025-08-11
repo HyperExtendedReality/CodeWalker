@@ -92,6 +92,7 @@ namespace ST.Library.UI.NodeEditor
         /// <summary>
         /// Gets or sets the title background color
         /// </summary>
+        [DefaultValue(typeof(Color), "200, 30, 144, 255")]
         public Color TitleColor {
             get { return _TitleColor; }
             protected set {
