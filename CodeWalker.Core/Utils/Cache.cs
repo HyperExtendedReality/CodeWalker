@@ -14,6 +14,8 @@ namespace CodeWalker
         public double CacheTime = 10.0; //seconds to keep something that's not used
         public DateTime CurrentTime = DateTime.Now;
 
+        public Action<TKey, TVal> OnEvicted;
+
         private LinkedList<TVal> loadedList = new LinkedList<TVal>();
         private Dictionary<TKey, LinkedListNode<TVal>> loadedListDict = new Dictionary<TKey, LinkedListNode<TVal>>();
 
@@ -72,16 +74,18 @@ namespace CodeWalker
                 int iter = 0, maxiter = 2;
                 while (!CanAdd() && (iter<maxiter))
                 {
-                    while ((!CanAdd()) && (oldlln != null) && ((CurrentTime - oldlln.Value.LastUseTime).TotalSeconds > cachetime))
-                    {
-                        Interlocked.Add(ref CurrentMemoryUsage, -oldlln.Value.MemoryUsage);
-                        loadedListDict.Remove(oldlln.Value.Key);
-                        loadedList.Remove(oldlln); //gc should free up memory later..
-                        oldlln.Value = null;
-                        oldlln = null;
-                        //GC.Collect();
-                        oldlln = loadedList.First;
-                    }
+                while ((!CanAdd()) && (oldlln != null) && ((CurrentTime - oldlln.Value.LastUseTime).TotalSeconds > cachetime))
+                {
+                    var evicted = oldlln.Value;
+                    Interlocked.Add(ref CurrentMemoryUsage, -evicted.MemoryUsage);
+                    loadedListDict.Remove(evicted.Key);
+                    loadedList.Remove(oldlln); //gc should free up memory later..
+                    OnEvicted?.Invoke(evicted.Key, evicted);
+                    oldlln.Value = null;
+                    oldlln = null;
+                    //GC.Collect();
+                    oldlln = loadedList.First;
+                }
                     cachetime *= 0.5;
                     iter++;
                 }
@@ -118,9 +122,11 @@ namespace CodeWalker
             LinkedListNode<TVal> n;
             if (loadedListDict.TryGetValue(key, out n))
             {
+                var evicted = n.Value;
                 loadedListDict.Remove(key);
                 loadedList.Remove(n);
-                Interlocked.Add(ref CurrentMemoryUsage, -n.Value.MemoryUsage);
+                Interlocked.Add(ref CurrentMemoryUsage, -evicted.MemoryUsage);
+                OnEvicted?.Invoke(evicted.Key, evicted);
             }
         }
 
@@ -132,9 +138,11 @@ namespace CodeWalker
             {
                 if ((CurrentTime - oldlln.Value.LastUseTime).TotalSeconds < CacheTime) break;
                 var nextln = oldlln.Next;
-                Interlocked.Add(ref CurrentMemoryUsage, -oldlln.Value.MemoryUsage);
-                loadedListDict.Remove(oldlln.Value.Key);
+                var evicted = oldlln.Value;
+                Interlocked.Add(ref CurrentMemoryUsage, -evicted.MemoryUsage);
+                loadedListDict.Remove(evicted.Key);
                 loadedList.Remove(oldlln); //gc should free up memory later..
+                OnEvicted?.Invoke(evicted.Key, evicted);
                 oldlln.Value = null;
                 oldlln = nextln;
             }

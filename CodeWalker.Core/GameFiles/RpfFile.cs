@@ -276,12 +276,11 @@ namespace CodeWalker.GameFiles
         /// Asynchronous version of ScanStructure. Accepts async status and error log callbacks.
         public async Task ScanStructureAsync(Func<string, Task> updateStatus, Func<string, Task> errorLog)
         {
-            using (var fs = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan))
-            using (var br = new BinaryReader(fs))
+            await using (var fs = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
                 try
                 {
-                    await ScanStructureAsync(br, updateStatus, errorLog);
+                    await ScanStructureInternalAsync(fs, updateStatus, errorLog);
                 }
                 catch (Exception ex)
                 {
@@ -293,63 +292,66 @@ namespace CodeWalker.GameFiles
             }
         }
 
-        private async Task ScanStructureAsync(BinaryReader br, Func<string, Task> updateStatus, Func<string, Task> errorLog)
+        private async Task ScanStructureInternalAsync(Stream stream, Func<string, Task> updateStatus, Func<string, Task> errorLog)
         {
-            ReadHeader(br);
-
-            GrandTotalRpfCount = 1;
-            GrandTotalFileCount = 1;
-            GrandTotalFolderCount = 0;
-            GrandTotalResourceCount = 0;
-            GrandTotalBinaryFileCount = 0;
-
-            Children = new List<RpfFile>();
-
-            if (updateStatus != null)
-                await updateStatus($"Scanning {Path}...");
-
-            foreach (RpfEntry entry in AllEntries)
+            using (var br = new BinaryReader(stream, Encoding.Default, true))
             {
-                try
+                ReadHeader(br);
+
+                GrandTotalRpfCount = 1;
+                GrandTotalFileCount = 1;
+                GrandTotalFolderCount = 0;
+                GrandTotalResourceCount = 0;
+                GrandTotalBinaryFileCount = 0;
+
+                Children = new List<RpfFile>();
+
+                if (updateStatus != null)
+                    await updateStatus($"Scanning {Path}...");
+
+                foreach (RpfEntry entry in AllEntries)
                 {
-                    if (entry is RpfBinaryFileEntry binentry)
+                    try
                     {
-                        var lname = binentry.NameLower;
-                        if (lname.EndsWith(".rpf") && IsValidPath(binentry.Path))
+                        if (entry is RpfBinaryFileEntry binentry)
                         {
-                            br.BaseStream.Position = StartPos + ((long)binentry.FileOffset * 512);
-                            long l = binentry.GetFileSize();
-                            RpfFile subfile = new RpfFile(binentry.Name, binentry.Path, l);
-                            subfile.Parent = this;
-                            subfile.ParentFileEntry = binentry;
-                            await subfile.ScanStructureAsync(br, updateStatus, errorLog);
-                            GrandTotalRpfCount += subfile.GrandTotalRpfCount;
-                            GrandTotalFileCount += subfile.GrandTotalFileCount;
-                            GrandTotalFolderCount += subfile.GrandTotalFolderCount;
-                            GrandTotalResourceCount += subfile.GrandTotalResourceCount;
-                            GrandTotalBinaryFileCount += subfile.GrandTotalBinaryFileCount;
-                            Children.Add(subfile);
+                            var lname = binentry.NameLower;
+                            if (lname.EndsWith(".rpf") && IsValidPath(binentry.Path))
+                            {
+                                br.BaseStream.Position = StartPos + ((long)binentry.FileOffset * 512);
+                                long l = binentry.GetFileSize();
+                                RpfFile subfile = new RpfFile(binentry.Name, binentry.Path, l);
+                                subfile.Parent = this;
+                                subfile.ParentFileEntry = binentry;
+                                await subfile.ScanStructureInternalAsync(stream, updateStatus, errorLog);
+                                GrandTotalRpfCount += subfile.GrandTotalRpfCount;
+                                GrandTotalFileCount += subfile.GrandTotalFileCount;
+                                GrandTotalFolderCount += subfile.GrandTotalFolderCount;
+                                GrandTotalResourceCount += subfile.GrandTotalResourceCount;
+                                GrandTotalBinaryFileCount += subfile.GrandTotalBinaryFileCount;
+                                Children.Add(subfile);
+                            }
+                            else
+                            {
+                                GrandTotalBinaryFileCount++;
+                                GrandTotalFileCount++;
+                            }
                         }
-                        else
+                        else if (entry is RpfResourceFileEntry)
                         {
-                            GrandTotalBinaryFileCount++;
+                            GrandTotalResourceCount++;
                             GrandTotalFileCount++;
                         }
+                        else if (entry is RpfDirectoryEntry)
+                        {
+                            GrandTotalFolderCount++;
+                        }
                     }
-                    else if (entry is RpfResourceFileEntry)
+                    catch (Exception ex)
                     {
-                        GrandTotalResourceCount++;
-                        GrandTotalFileCount++;
+                        if (errorLog != null)
+                            await errorLog(entry.Path + ": " + ex.ToString());
                     }
-                    else if (entry is RpfDirectoryEntry)
-                    {
-                        GrandTotalFolderCount++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (errorLog != null)
-                        await errorLog(entry.Path + ": " + ex.ToString());
                 }
             }
         }
