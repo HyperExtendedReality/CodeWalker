@@ -61,6 +61,7 @@ namespace ST.Library.UI.NodeEditor
         /// Gets or sets the background color when the property option is hovered by the mouse
         /// </summary>
         [Description("Get or set the background color when the property option is hovered by the mouse")]
+        [DefaultValue(typeof(Color), "50, 125, 125, 125")]
         public Color ItemHoverColor {
             get { return _ItemHoverColor; }
             set { _ItemHoverColor = value; }
@@ -86,6 +87,7 @@ namespace ST.Library.UI.NodeEditor
         /// Gets or sets the background color of the attribute option value
         /// </summary>
         [Description("Get or set attribute option value background color")]
+        [DefaultValue(typeof(Color), "80, 80, 80")]
         public Color ItemValueBackColor {
             get { return _ItemValueBackColor; }
             set {
@@ -99,6 +101,7 @@ namespace ST.Library.UI.NodeEditor
         /// Gets or sets the default title background color
         /// </summary>
         [Description("Get or set the default title background color")]
+        [DefaultValue(typeof(Color), "127, 0, 0, 0")]
         public Color TitleColor {
             get { return _TitleColor; }
             set {
@@ -113,6 +116,7 @@ namespace ST.Library.UI.NodeEditor
         /// Get or set the background color of the prompt message when the property is set incorrectly
         /// </summary>
         [Description("Get or set the background color of the message when the property is set incorrectly")]
+        [DefaultValue(typeof(Color), "200, 165, 42, 42")]
         public Color ErrorColor {
             get { return _ErrorColor; }
             set { _ErrorColor = value; }
@@ -123,6 +127,7 @@ namespace ST.Library.UI.NodeEditor
         /// Gets or sets the background color of the attribute description information
         /// </summary>
         [Description("Get or set the background color of attribute description information")]
+        [DefaultValue(typeof(Color), "200, 184, 134, 11")]
         public Color DescriptionColor {
             get { return _DescriptionColor; }
             set { _DescriptionColor = value; }
@@ -133,6 +138,7 @@ namespace ST.Library.UI.NodeEditor
         /// Gets or sets whether to display the node title
         /// </summary>
         [Description("Get or set whether to display the node title")]
+        [DefaultValue(true)]
         public bool ShowTitle {
             get { return _ShowTitle; }
             set {

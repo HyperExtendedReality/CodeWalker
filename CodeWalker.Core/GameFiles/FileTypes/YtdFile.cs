@@ -26,7 +26,7 @@ namespace CodeWalker.GameFiles
         public void Load(byte[] data)
         {
             //direct load from a raw, compressed ytd file
-
+            RawFileData = data;
             RpfFile.LoadResourceFile(this, data, (uint)GetVersion(RpfManager.IsGen9));
 
             Loaded = true;
