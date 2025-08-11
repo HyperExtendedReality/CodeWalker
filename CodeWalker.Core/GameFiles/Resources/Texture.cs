@@ -269,7 +269,23 @@ namespace CodeWalker.GameFiles
 
         private string_r NameBlock = null;
 
-        public TextureData Data { get; set; }
+        private TextureData _Data;
+        public TextureData Data
+        {
+            get
+            {
+                if (_Data == null)
+                {
+                    _Data = DataLoader?.Invoke(this as Texture);
+                }
+                return _Data;
+            }
+            set
+            {
+                _Data = value;
+            }
+        }
+        public Func<Texture, TextureData> DataLoader { get; set; }
 
         public ShaderResourceViewG9 G9_SRV { get; set; }//make sure this is null if saving legacy version!
 
@@ -939,7 +955,8 @@ namespace CodeWalker.GameFiles
                 this.Unknown_8Ch = reader.ReadUInt32();
 
                 // read reference data
-                this.Data = reader.ReadBlockAt<TextureData>(this.DataPointer, this.Format, this.Width, this.Height, this.Levels, this.Stride);
+                // This is now deferred until the data is first accessed
+                //this.Data = reader.ReadBlockAt<TextureData>(this.DataPointer, this.Format, this.Width, this.Height, this.Levels, this.Stride);
 
             }
         }

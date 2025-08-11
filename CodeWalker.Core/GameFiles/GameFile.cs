@@ -8,6 +8,7 @@ namespace CodeWalker.GameFiles
 {
     public abstract class GameFile : Cacheable<GameFileCacheKey>
     {
+        public byte[] RawFileData { get; set; }
         public volatile bool Loaded = false;
         public volatile bool LoadQueued = false;
         public RpfFileEntry RpfFileEntry { get; set; }

@@ -62,6 +62,15 @@ namespace CodeWalker.GameFiles
 
             TextureDict = rd.ReadBlock<TextureDictionary>();
 
+            if (TextureDict?.Textures?.data_items != null)
+            {
+                foreach (var tex in TextureDict.Textures.data_items)
+                {
+                    tex.DataLoader = (t) => LoadTextureData(t);
+                }
+            }
+
+
             //MemoryUsage = 0; //uses decompressed file size now..
             //if (TextureDict != null)
             //{
@@ -70,6 +79,20 @@ namespace CodeWalker.GameFiles
 
             //var analyzer = new ResourceAnalyzer(rd);
 
+        }
+
+        public TextureData LoadTextureData(Texture texture)
+        {
+            if (RawFileData == null) return null;
+            if (texture == null) return null;
+            if (RpfFileEntry is RpfResourceFileEntry resentry)
+            {
+                var reader = new ResourceDataReader(resentry, RawFileData);
+                var data = reader.ReadBlockAt<TextureData>(texture.DataPointer, texture.Format, texture.Width, texture.Height, texture.Levels, texture.Stride);
+                texture.Data = data; //cache the data so it's not loaded every time
+                return data;
+            }
+            return null;
         }
 
 

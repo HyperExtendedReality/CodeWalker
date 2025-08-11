@@ -346,6 +346,11 @@ namespace CodeWalker.GameFiles
             }
             if (data != null)
             {
+                GameFile gameFile = file as GameFile;
+                if (gameFile != null)
+                {
+                    gameFile.RawFileData = data;
+                }
                 file.Load(data, entry);
                 return true;
             }
