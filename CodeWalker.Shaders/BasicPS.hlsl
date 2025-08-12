@@ -41,7 +41,7 @@ float4 main(VS_OUTPUT input) : SV_TARGET
 			c.a = saturate(mask.r + mask.g + mask.b + mask.a);
 			c.rgb = 0;
 		}
-        c.a = saturate(c.a*AlphaScale);
+        c.a = saturate(c.a*AlphaScale*LodFade);
     }
     if (EnableTint == 1)
     {

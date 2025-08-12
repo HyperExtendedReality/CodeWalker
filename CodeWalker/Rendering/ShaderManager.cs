@@ -810,7 +810,7 @@ namespace CodeWalker.Rendering
                 if (vtypok)
                 {
 
-                    shader.SetGeomVars(context, geom.Geom);
+                    shader.SetGeomVars(context, geom);
                     geom.Geom.Render(context);
 
                 }

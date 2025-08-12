@@ -3361,6 +3361,7 @@ namespace CodeWalker.Rendering
                 rginst.Inst.Radius = radius;
                 rginst.Inst.Distance = distance;
                 rginst.Inst.CastShadow = castshadow;
+                rginst.Inst.LodFade = (entity != null) ? entity.LodFade : 1.0f;
 
 
                 RenderableModel[] models = isselected ? rndbl.AllModels : rndbl.HDModels;
@@ -4145,7 +4146,7 @@ namespace CodeWalker.Rendering
                     ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
                     if (ent.Distance <= (ent.LodDist * LodDistMult))
                     {
-                        RecurseAddVisibleLeaves(ent);
+                        RecurseAddVisibleLeaves(ent, 1.0f);
                     }
                 }
             }
@@ -4180,15 +4181,33 @@ namespace CodeWalker.Rendering
             VisibleLightsPrev = vl;
         }
 
-        private void RecurseAddVisibleLeaves(YmapEntityDef ent)
+        private void RecurseAddVisibleLeaves(YmapEntityDef ent, float parentFade = 1.0f)
         {
             var clist = GetEntityChildren(ent);
+            float fade = 1.0f;
+            float childfade = 1.0f;
+            if (ent.LodDist > 0)
+            {
+                fade = 1.0f - (ent.Distance - (ent.LodDist - ent.LodFadeDist)) / ent.LodFadeDist;
+            }
+            if (ent.ChildLodDist > 0)
+            {
+                childfade = (ent.Distance - (ent.ChildLodDist - ent.LodFadeDist)) / ent.LodFadeDist;
+            }
+            fade = Math.Min(1.0f, fade);
+            fade = Math.Max(0.0f, fade);
+            childfade = Math.Min(1.0f, childfade);
+            childfade = Math.Max(0.0f, childfade);
+
+            ent.LodFade = fade * parentFade;
+
+
             if (clist != null)
             {
                 var cnode = clist.First;
                 while (cnode != null)
                 {
-                    RecurseAddVisibleLeaves(cnode.Value);
+                    RecurseAddVisibleLeaves(cnode.Value, childfade * parentFade);
                     cnode = cnode.Next;
                 }
             }
@@ -4225,20 +4244,6 @@ namespace CodeWalker.Rendering
                 if (ent.Distance <= (ent.ChildLodDist * LodDistMult))
                 {
                     return clist;
-                }
-                else
-                {
-                    var cnode = clist.First;
-                    while (cnode != null)
-                    {
-                        var child = cnode.Value;
-                        child.Distance = MapViewEnabled ? MapViewDist : (child.Position - Position).Length();
-                        if (child.Distance <= (child.LodDist * LodDistMult))
-                        {
-                            return clist;
-                        }
-                        cnode = cnode.Next;
-                    }
                 }
             }
             return null;

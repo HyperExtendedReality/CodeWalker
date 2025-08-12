@@ -76,6 +76,7 @@ namespace CodeWalker.Rendering
         public float wetnessMultiplier;
         public uint SpecOnly;
         public Vector4 TextureAlphaMask;
+        public float LodFade;
     }
     public struct BasicShaderInstGlobalMatrix
     {
@@ -601,8 +602,9 @@ namespace CodeWalker.Rendering
             VSModelVars.SetVSCBuffer(context, 3);
         }
 
-        public override void SetGeomVars(DeviceContext context, RenderableGeometry geom)
+        public override void SetGeomVars(DeviceContext context, RenderableGeometryInst inst)
         {
+            var geom = inst.Geom;
             RenderableTexture texture = null;
             RenderableTexture texture2 = null;
             RenderableTexture tintpal = null;
@@ -785,6 +787,7 @@ namespace CodeWalker.Rendering
             PSGeomVars.Vars.wetnessMultiplier = geom.wetnessMultiplier;
             PSGeomVars.Vars.SpecOnly = geom.SpecOnly ? 1u : 0u;
             PSGeomVars.Vars.TextureAlphaMask = textureAlphaMask;
+            PSGeomVars.Vars.LodFade = inst.LodFade;
             PSGeomVars.Update(context);
             PSGeomVars.SetPSCBuffer(context, 2);
 

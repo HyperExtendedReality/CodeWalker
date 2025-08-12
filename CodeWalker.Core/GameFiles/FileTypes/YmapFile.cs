@@ -1676,6 +1676,7 @@ namespace CodeWalker.GameFiles
         public float BSRadius;//cached from archetype
         public float LodDist;
         public float ChildLodDist;
+        public float LodFadeDist;
 
         public CEntityDef _CEntityDef;
         public CEntityDef CEntityDef { get { return _CEntityDef; } set { _CEntityDef = value; } }
@@ -1698,6 +1699,7 @@ namespace CodeWalker.GameFiles
         public bool IsVisible; //used for rendering
         public bool ChildrenVisible; //used for rendering
         public bool ChildrenRendered; //used when rendering ymap mode to reduce LOD flashing...
+        public float LodFade = 0.0f;
         public YmapEntityDef Parent { get; set; } //for browsing convenience, also used/updated for rendering
         public MetaHash ParentName { get; set; } //just for browsing convenience
 
@@ -1959,6 +1961,7 @@ namespace CodeWalker.GameFiles
                 {
                     ChildLodDist = LodDist * 0.5f;
                 }
+                LodFadeDist = LodDist * 0.1f; //fade over 10% of the lod distance
             }
         }
 

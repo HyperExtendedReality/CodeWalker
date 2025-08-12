@@ -39,6 +39,7 @@ cbuffer PSGeomVars : register(b2)
     float wetnessMultiplier;
     uint SpecOnly;
 	float4 TextureAlphaMask;
+    float LodFade;
 }
 
 
