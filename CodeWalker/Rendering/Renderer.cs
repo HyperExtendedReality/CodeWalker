@@ -1875,7 +1875,7 @@ namespace CodeWalker.Rendering
             LodManager.ShowScriptedYmaps = ShowScriptedYmaps;
             LodManager.LODLightsEnabled = renderlodlights;
             LodManager.HDLightsEnabled = renderlights;
-            LodManager.Update(renderworldVisibleYmapDict, camera, currentElapsedTime);
+            LodManager.Update(renderworldVisibleYmapDict, camera, currentElapsedTime, gameFileCache, renderableCache);
 
             foreach (var updatelodlights in LodManager.UpdateLodLights)
             {
@@ -4028,6 +4028,8 @@ namespace CodeWalker.Rendering
 
         public Camera Camera = null;
         public Vector3 Position = Vector3.Zero;
+        public GameFileCache GameFileCache = null;
+        public RenderableCache RenderableCache = null;
 
         public Dictionary<MetaHash, YmapFile> CurrentYmaps = new Dictionary<MetaHash, YmapFile>();
         private List<MetaHash> RemoveYmaps = new List<MetaHash>();
@@ -4039,10 +4041,12 @@ namespace CodeWalker.Rendering
         public HashSet<YmapEntityDef.LightInstance> VisibleLightsPrev = new HashSet<YmapEntityDef.LightInstance>();
         public HashSet<YmapLODLights> UpdateLodLights = new HashSet<YmapLODLights>();
 
-        public void Update(Dictionary<MetaHash, YmapFile> ymaps, Camera camera, float elapsed)
+        public void Update(Dictionary<MetaHash, YmapFile> ymaps, Camera camera, float elapsed, GameFileCache gameFileCache, RenderableCache renderableCache)
         {
             Camera = camera;
             Position = camera.Position;
+            GameFileCache = gameFileCache;
+            RenderableCache = renderableCache;
 
             foreach (var kvp in ymaps)
             {
@@ -4146,6 +4150,9 @@ namespace CodeWalker.Rendering
                 {
                     ent.LastDist = ent.Distance;
                     ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
+
+                    PreloadEntity(ent);
+
                     if (ent.Distance <= (ent.LodDist * LodDistMult))
                     {
                         RecurseAddVisibleLeaves(ent);
@@ -4186,34 +4193,41 @@ namespace CodeWalker.Rendering
         private void RecurseAddVisibleLeaves(YmapEntityDef ent)
         {
             var clist = GetEntityChildren(ent);
-            if (clist != null)
+
+            // Always consider rendering the parent entity first.
+            if (EntityVisible(ent))
             {
-                var cnode = clist.First;
-                while (cnode != null)
+                float fade = 1.0f;
+
+                // Fade out when children are about to appear
+                if (clist != null)
                 {
-                    RecurseAddVisibleLeaves(cnode.Value);
-                    cnode = cnode.Next;
-                }
-            }
-            else
-            {
-                if (EntityVisible(ent))
-                {
-                    float fade = 1.0f;
-                    if (ent.LodDist > 0)
+                    float fadeDist = ent.ChildLodDist * 0.2f;
+                    float fadeOutStart = ent.ChildLodDist - fadeDist;
+                    if (ent.Distance > fadeOutStart)
                     {
-                        float fadeDist = ent.LodFadeDist;
-                        float fadeInStart = ent.LodDist - fadeDist;
-                        if (ent.Distance > fadeInStart)
-                        {
-                            fade = (ent.LodDist - ent.Distance) / fadeDist;
-                        }
+                        fade = (ent.ChildLodDist - ent.Distance) / fadeDist;
                     }
-                    fade = Math.Min(1.0f, fade);
-                    fade = Math.Max(0.0f, fade);
+                }
+
+                // Also consider the entity's own LOD distance for fading in
+                if (ent.LodDist > 0)
+                {
+                    float ownFadeDist = ent.LodFadeDist;
+                    float ownFadeInStart = ent.LodDist - ownFadeDist;
+                    if (ent.Distance > ownFadeInStart)
+                    {
+                        float ownFade = (ent.LodDist - ent.Distance) / ownFadeDist;
+                        fade = Math.Min(fade, ownFade); // Combine fades, take the minimum
+                    }
+                }
+
+                fade = Math.Min(1.0f, fade);
+                fade = Math.Max(0.0f, fade);
+
+                if (fade > 0.0f)
+                {
                     ent.LodFade = fade;
-
-
                     VisibleLeaves.Add(ent);
 
                     if (HDLightsEnabled && (ent.Lights != null))
@@ -4223,6 +4237,17 @@ namespace CodeWalker.Rendering
                             VisibleLights.Add(ent.Lights[i]);
                         }
                     }
+                }
+            }
+
+            // If children should be rendered, recurse into them.
+            if (clist != null)
+            {
+                var cnode = clist.First;
+                while (cnode != null)
+                {
+                    RecurseAddVisibleLeaves(cnode.Value);
+                    cnode = cnode.Next;
                 }
             }
         }
@@ -4265,7 +4290,20 @@ namespace CodeWalker.Rendering
                     while (cnode != null)
                     {
                         var child = cnode.Value;
-                        if (child.Archetype == null) return null; // Child not loaded yet, so render parent
+                        if (child.Archetype == null) return null; // Child archetype not loaded yet
+
+                        var drawableTask = GameFileCache.TryGetDrawableAsync(child.Archetype);
+                        if (!drawableTask.IsCompleted) return null; // Still loading
+
+                        var (drawable, waiting) = drawableTask.Result;
+                        if (waiting || drawable == null) return null; // Drawable not loaded yet
+
+                        var renderable = RenderableCache.GetRenderable(drawable);
+                        if (renderable == null || !renderable.IsLoaded || !renderable.AllTexturesLoaded)
+                        {
+                            return null; // Child renderable or textures not ready yet, so render parent
+                        }
+
                         cnode = cnode.Next;
                     }
                     return clist;
@@ -4308,6 +4346,40 @@ namespace CodeWalker.Rendering
                 }
             }
             return true;
+        }
+
+        private void PreloadEntity(YmapEntityDef ent)
+        {
+            if (ent == null) return;
+
+            float preloadDist = ent.LodDist * 1.2f; // 20% buffer
+
+            if (ent.Distance > ent.LodDist && ent.Distance <= preloadDist)
+            {
+                if (ent.Archetype != null)
+                {
+                    var _ = GameFileCache.TryGetDrawableAsync(ent.Archetype);
+                }
+            }
+
+            var children = ent.LodManagerChildren;
+            if (children != null)
+            {
+                float childPreloadDist = ent.ChildLodDist * 1.2f;
+                if (ent.Distance > ent.ChildLodDist && ent.Distance <= childPreloadDist)
+                {
+                    var cnode = children.First;
+                    while (cnode != null)
+                    {
+                        var child = cnode.Value;
+                        if (child.Archetype != null)
+                        {
+                            var _ = GameFileCache.TryGetDrawableAsync(child.Archetype);
+                        }
+                        cnode = cnode.Next;
+                    }
+                }
+            }
         }
 
 
