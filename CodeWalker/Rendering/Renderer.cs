@@ -4299,7 +4299,7 @@ namespace CodeWalker.Rendering
                         if (waiting || drawable == null) return null; // Drawable not loaded yet
 
                         var renderable = RenderableCache.GetRenderable(drawable);
-                        if (renderable == null || !renderable.IsLoaded || !renderable.AllTexturesLoaded)
+                        if (renderable == null || !renderable.IsLoaded)// || !renderable.AllTexturesLoaded)
                         {
                             return null; // Child renderable or textures not ready yet, so render parent
                         }
