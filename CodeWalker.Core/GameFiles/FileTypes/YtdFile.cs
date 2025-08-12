@@ -66,7 +66,7 @@ namespace CodeWalker.GameFiles
             {
                 foreach (var tex in TextureDict.Textures.data_items)
                 {
-                    tex.DataLoader = (t) => LoadTextureData(t);
+                    tex.OwnerYtd = this;
                 }
             }
 

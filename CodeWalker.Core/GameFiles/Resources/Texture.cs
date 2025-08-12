@@ -276,7 +276,7 @@ namespace CodeWalker.GameFiles
             {
                 if (_Data == null)
                 {
-                    _Data = DataLoader?.Invoke(this as Texture);
+                    OwnerYtd?.LoadTextureData(this as Texture);
                 }
                 return _Data;
             }
@@ -285,7 +285,7 @@ namespace CodeWalker.GameFiles
                 _Data = value;
             }
         }
-        public Func<Texture, TextureData> DataLoader { get; set; }
+        public YtdFile OwnerYtd { get; set; }
 
         public ShaderResourceViewG9 G9_SRV { get; set; }//make sure this is null if saving legacy version!
 
