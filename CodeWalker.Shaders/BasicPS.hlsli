@@ -40,6 +40,9 @@ cbuffer PSGeomVars : register(b2)
     uint SpecOnly;
 	float4 TextureAlphaMask;
     float LodFade;
+    float pad0;
+    float pad1;
+    float pad2;
 }
 
 

@@ -77,6 +77,9 @@ namespace CodeWalker.Rendering
         public uint SpecOnly;
         public Vector4 TextureAlphaMask;
         public float LodFade;
+        public float pad0;
+        public float pad1;
+        public float pad2;
     }
     public struct BasicShaderInstGlobalMatrix
     {
