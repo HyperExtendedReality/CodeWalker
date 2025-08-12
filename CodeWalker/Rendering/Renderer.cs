@@ -4146,12 +4146,12 @@ namespace CodeWalker.Rendering
             foreach (var kvp in RootEntities)
             {
                 var ent = kvp.Key;
+
+                RecursePreload(ent);
+
                 if (EntityVisibleAtMaxLodLevel(ent))
                 {
                     ent.LastDist = ent.Distance;
-                    ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
-
-                    PreloadEntity(ent);
 
                     if (ent.Distance <= (ent.LodDist * LodDistMult))
                     {
@@ -4348,12 +4348,15 @@ namespace CodeWalker.Rendering
             return true;
         }
 
-        private void PreloadEntity(YmapEntityDef ent)
+        private void RecursePreload(YmapEntityDef ent)
         {
             if (ent == null) return;
+            if (!EntityVisibleAtMaxLodLevel(ent)) return;
 
-            float preloadDist = ent.LodDist * 1.2f; // 20% buffer
+            ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
 
+            // Preload this entity if it's in the buffer zone
+            float preloadDist = ent.LodDist * 1.2f;
             if (ent.Distance > ent.LodDist && ent.Distance <= preloadDist)
             {
                 if (ent.Archetype != null)
@@ -4362,20 +4365,17 @@ namespace CodeWalker.Rendering
                 }
             }
 
+            // Recurse to children
             var children = ent.LodManagerChildren;
             if (children != null)
             {
                 float childPreloadDist = ent.ChildLodDist * 1.2f;
-                if (ent.Distance > ent.ChildLodDist && ent.Distance <= childPreloadDist)
+                if (ent.Distance <= childPreloadDist) // If we are close enough to consider children...
                 {
                     var cnode = children.First;
                     while (cnode != null)
                     {
-                        var child = cnode.Value;
-                        if (child.Archetype != null)
-                        {
-                            var _ = GameFileCache.TryGetDrawableAsync(child.Archetype);
-                        }
+                        RecursePreload(cnode.Value);
                         cnode = cnode.Next;
                     }
                 }
