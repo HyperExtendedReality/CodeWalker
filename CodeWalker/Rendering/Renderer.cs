@@ -4202,7 +4202,12 @@ namespace CodeWalker.Rendering
                     float fade = 1.0f;
                     if (ent.LodDist > 0)
                     {
-                        fade = 1.0f - (ent.Distance - (ent.LodDist - ent.LodFadeDist)) / ent.LodFadeDist;
+                        float fadeDist = ent.LodFadeDist;
+                        float fadeInStart = ent.LodDist - fadeDist;
+                        if (ent.Distance > fadeInStart)
+                        {
+                            fade = (ent.LodDist - ent.Distance) / fadeDist;
+                        }
                     }
                     fade = Math.Min(1.0f, fade);
                     fade = Math.Max(0.0f, fade);
@@ -4235,11 +4240,9 @@ namespace CodeWalker.Rendering
                 {
                     ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
                 }
-                if (ent.Distance <= (ent.ChildLodDist * LodDistMult))
-                {
-                    return clist;
-                }
-                else
+
+                bool childrenInRange = ent.Distance <= (ent.ChildLodDist * LodDistMult);
+                if (!childrenInRange)
                 {
                     var cnode = clist.First;
                     while (cnode != null)
@@ -4248,10 +4251,24 @@ namespace CodeWalker.Rendering
                         child.Distance = MapViewEnabled ? MapViewDist : (child.Position - Position).Length();
                         if (child.Distance <= (child.LodDist * LodDistMult))
                         {
-                            return clist;
+                            childrenInRange = true;
+                            break;
                         }
                         cnode = cnode.Next;
                     }
+                }
+
+                if (childrenInRange)
+                {
+                    // Check if all children are loaded
+                    var cnode = clist.First;
+                    while (cnode != null)
+                    {
+                        var child = cnode.Value;
+                        if (child.Archetype == null) return null; // Child not loaded yet, so render parent
+                        cnode = cnode.Next;
+                    }
+                    return clist;
                 }
             }
             return null;
