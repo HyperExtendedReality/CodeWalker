@@ -3840,16 +3840,7 @@ namespace CodeWalker.Rendering
             VisibleLights.Clear();
             foreach (var kvp in RootEntities)
             {
-                var ent = kvp.Key;
-                if (EntityVisibleAtMaxLodLevel(ent))
-                {
-                    ent.LastDist = ent.Distance;
-                    ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
-                    if (ent.Distance <= (ent.LodDist * LodDistMult))
-                    {
-                        RecurseAddVisibleLeaves(ent);
-                    }
-                }
+                ProcessEntity(kvp.Key);
             }
 
             UpdateLodLights.Clear();
@@ -3882,71 +3873,75 @@ namespace CodeWalker.Rendering
             VisibleLightsPrev = vl;
         }
 
-        private void RecurseAddVisibleLeaves(YmapEntityDef ent)
+        private void ProcessEntity(YmapEntityDef ent)
         {
-            var clist = GetEntityChildren(ent);
-            if (clist != null)
+            if (!EntityVisibleAtMaxLodLevel(ent)) return;
+
+            ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
+
+            bool childrenReadyAndInRange = AreChildrenReadyAndInRange(ent);
+
+            if (childrenReadyAndInRange)
             {
-                var cnode = clist.First;
+                var cnode = ent.LodManagerChildren.First;
                 while (cnode != null)
                 {
-                    RecurseAddVisibleLeaves(cnode.Value);
+                    ProcessEntity(cnode.Value);
                     cnode = cnode.Next;
                 }
             }
             else
             {
-                if (EntityVisible(ent))
+                if (ent.Distance <= (ent.LodDist * LodDistMult))
                 {
-                    VisibleLeaves.Add(ent);
-
-                    if (HDLightsEnabled && (ent.Lights != null))
+                    if (EntityVisible(ent))
                     {
-                        for (int i = 0; i < ent.Lights.Length; i++)
+                        VisibleLeaves.Add(ent);
+                        if (HDLightsEnabled && (ent.Lights != null))
                         {
-                            VisibleLights.Add(ent.Lights[i]);
+                            for (int i = 0; i < ent.Lights.Length; i++)
+                            {
+                                VisibleLights.Add(ent.Lights[i]);
+                            }
                         }
                     }
                 }
             }
         }
 
-
-
-        private LinkedList<YmapEntityDef> GetEntityChildren(YmapEntityDef ent)
+        private bool AreChildrenReadyAndInRange(YmapEntityDef ent)
         {
-            //get the children list for this entity, if all the hcildren are available, and they are within range
-            if (!EntityChildrenVisibleAtMaxLodLevel(ent)) return null;
+            if (!EntityChildrenVisibleAtMaxLodLevel(ent)) return false;
 
             bool childrenInRange = ent.Distance <= (ent.ChildLodDist * LodDistMult);
-            if (!childrenInRange) return null;
+            if (!childrenInRange) return false;
 
             var clist = ent.LodManagerChildren;
-            if (clist == null || clist.Count < ent._CEntityDef.numChildren) return null;
+            if (clist == null || clist.Count < ent._CEntityDef.numChildren) return false;
 
             // Children are in range, now check if they are ready to be rendered.
             var cnode = clist.First;
             while (cnode != null)
             {
                 var child = cnode.Value;
-                if (child.Archetype == null) return null;
+                if (child.Archetype == null) return false;
 
                 var drawableTask = GameFileCache.TryGetDrawableAsync(child.Archetype);
-                if (!drawableTask.IsCompleted) return null;
+                if (!drawableTask.IsCompleted) return false;
 
                 var (drawable, waiting) = drawableTask.Result;
-                if (waiting || drawable == null) return null;
+                if (waiting || drawable == null) return false;
 
                 var renderable = RenderableCache.GetRenderable(drawable);
 
                 if (renderable == null || !renderable.IsLoaded)
                 {
-                    return null;
+                    return false;
                 }
                 cnode = cnode.Next;
             }
 
-            return clist;
+            return true;
         }
 
         private bool EntityVisible(YmapEntityDef ent)
@@ -3984,8 +3979,6 @@ namespace CodeWalker.Rendering
             }
             return true;
         }
-
-
     }
 
 
