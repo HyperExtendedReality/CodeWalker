@@ -253,41 +253,21 @@ namespace CodeWalker.Rendering
             if (elapsed > 0.1f) elapsed = 0.1f;
             currentRealTime += elapsed;
             currentElapsedTime = elapsed;
-
-
-
             UpdateTimeOfDay(elapsed);
-
-
             weather.Update(elapsed);
-
             clouds.Update(elapsed);
-
-
             UpdateWindVector(elapsed);
-
             UpdateGlobalLights();
-
-
             camera.SetMousePosition(mouseX, mouseY);
-
             camera.Update(elapsed);
         }
-
 
         public void BeginRender(DeviceContext ctx)
         {
             context = ctx;
-
             dxman.ClearRenderTarget(context);
-
             shaders.BeginFrame(context, currentRealTime, currentElapsedTime);
-
             shaders.EnsureShaderTextures(gameFileCache, renderableCache);
-
-
-
-
             SelectionLineVerts.Clear();
             SelectionTriVerts.Clear();
             WhiteBoxes.Clear();
@@ -298,28 +278,22 @@ namespace CodeWalker.Rendering
             HilightSpheres.Clear();
             BoundingBoxes.Clear();
             BoundingSpheres.Clear();
-
             RenderedDrawables.Clear();
             RenderedBoundComps.Clear();
-
             renderskeletonlist.Clear();
-
             HideEntities.Clear();
         }
 
         public void RenderSkyAndClouds()
         {
             RenderSky();
-
             RenderClouds();
-
             shaders.ClearDepth(context);
         }
 
         public void RenderQueued()
         {
             shaders.RenderQueued(context, camera, currentWindVec);
-
             RenderSkeletons();
         }
 
@@ -336,11 +310,8 @@ namespace CodeWalker.Rendering
         public bool ContentThreadProc()
         {
             bool rcItemsPending = renderableCache.ContentThreadProc();
-
             return rcItemsPending;
         }
-
-
 
         public void SetTimeOfDay(float hour)
         {
@@ -381,7 +352,6 @@ namespace CodeWalker.Rendering
             }
         }
 
-
         public string GetStatusText()
         {
             int rgc = (shaders != null) ? shaders.RenderedGeometries : 0;
@@ -395,8 +365,6 @@ namespace CodeWalker.Rendering
             return string.Format("Drawn: {0} geom, Loaded: {1} dr, {2} tx, Vram: {3}, Fps: {4}", rgc, crc, ctc, vram, fps);
         }
 
-
-
         public void Invalidate(Bounds bounds)
         {
             renderableCache.Invalidate(bounds);
@@ -405,15 +373,16 @@ namespace CodeWalker.Rendering
         {
             renderableCache.Invalidate(path);
         }
+
         public void Invalidate(YmapGrassInstanceBatch batch)
         {
             renderableCache.Invalidate(batch);
         }
+
         public void Invalidate(YmapLODLight lodlight)
         {
             renderableCache.Invalidate(lodlight);
         }
-
 
         public void UpdateSelectionDrawFlags(DrawableModel model, DrawableGeometry geom, bool rem)
         {
@@ -450,8 +419,6 @@ namespace CodeWalker.Rendering
             }
         }
 
-
-
         private void UpdateTimeOfDay(float elapsed)
         {
             if (timerunning)
@@ -478,7 +445,6 @@ namespace CodeWalker.Rendering
             Vector3 sundir = Vector3.Up;
             Vector3 moondir = Vector3.Down;
             Vector3 moonax = Vector3.UnitZ;
-
             if (controllightdir)
             {
                 float cryd = (float)Math.Cos(lightdiry);
@@ -517,29 +483,22 @@ namespace CodeWalker.Rendering
                 moondir = Vector3.Normalize(maxis.Multiply(mdir));
                 moonax = Vector3.Normalize(maxis.Multiply(Vector3.UnitY));
                 //bool usemoon = false;
-
                 if (swaphemisphere)
                 {
                     sundir.Y = -sundir.Y;
                 }
-
                 lightdir = sundir;
-
                 //if (lightdir.Z < -0.5f) lightdir.Z = -lightdir.Z; //make sure the lightsource is always above the horizon...
-
                 if ((timeofday < 5.0f) || (timeofday > 21.0f))
                 {
                     lightdir = moondir;
                     //usemoon = true;
                 }
-
                 if (lightdir.Z < 0)
                 {
                     lightdir.Z = 0; //don't let the light source go below the horizon...
                 }
-
                 //lightdir = Vector3.Normalize(weather.CurrentValues.sunDirection);
-
                 if ((weather != null) && weather.Inited)
                 {
                     lightdircolour = (Color4)weather.CurrentValues.lightDirCol;
@@ -553,18 +512,14 @@ namespace CodeWalker.Rendering
                     float minmult = hdr ? 0.0f : 0.5f;
                     lightdircolour *= Math.Max(lightdircolour.Alpha, minmult);
                     lightdirambcolour *= lightdirambcolour.Alpha * lamult; // 0.1f * lamult;
-
                     //if (usemoon)
                     //{
                     //    lightdircolour *= weather.CurrentValues.skyMoonIten;
                     //}
-
-
                     lightnaturalupcolour *= lightnaturalupcolour.Alpha * weather.CurrentValues.lightNaturalAmbUpIntensityMult;
                     lightnaturaldowncolour *= lightnaturaldowncolour.Alpha;
                     lightartificialupcolour *= lightartificialupcolour.Alpha;
                     lightartificialdowncolour *= lightartificialdowncolour.Alpha;
-
                     if (!hdr)
                     {
                         Color4 maxdirc = new Color4(1.0f);
@@ -581,10 +536,7 @@ namespace CodeWalker.Rendering
                         hdrint = weather.CurrentValues.skyHdr;//.lightDirCol.W;
                     }
                 }
-
-
             }
-
             globalLights.Weather = weather;
             globalLights.HdrEnabled = hdr;
             globalLights.SpecularEnabled = !MapViewEnabled;//disable specular for map view.
@@ -599,13 +551,10 @@ namespace CodeWalker.Rendering
             globalLights.Params.LightNaturalAmbDown = rendernaturalambientlight ? lightnaturaldowncolour : Color4.Black;
             globalLights.Params.LightArtificialAmbUp = renderartificialambientlight ? lightartificialupcolour : Color4.Black;
             globalLights.Params.LightArtificialAmbDown = renderartificialambientlight ? lightartificialdowncolour : Color4.Black;
-
-
             if (shaders != null)
             {
                 shaders.SetGlobalLightParams(globalLights);
             }
-
         }
 
         private void UpdateWindVector(float elapsed)
@@ -614,46 +563,33 @@ namespace CodeWalker.Rendering
             //currently just feed the wind vector with small oscillations...
             currentWindTime += elapsed;
             if (currentWindTime >= 200.0f) currentWindTime -= 200.0f;
-
             float dirval = (float)(currentWindTime * 0.01 * Math.PI);
             float dirval1 = (float)Math.Sin(currentWindTime * 0.100 * Math.PI) * 0.3f;
             float dirval2 = (float)(currentWindTime * 0.333 * Math.PI);
             float dirval3 = (float)(currentWindTime * 0.5 * Math.PI);
             float dirval4 = (float)Math.Sin(currentWindTime * 0.223 * Math.PI) * 0.4f;
             float dirval5 = (float)Math.Sin(currentWindTime * 0.4 * Math.PI) * 5.5f;
-
             currentWindVec.Z = (float)Math.Sin(dirval) * dirval1 + (float)Math.Cos(dirval2) * dirval4;
             currentWindVec.W = (float)Math.Cos(dirval) * dirval5 + (float)Math.Sin(dirval3) * dirval4;
-
             float strval = (float)(currentWindTime * 0.1 * Math.PI);
             float strval2 = (float)(currentWindTime * 0.825 * Math.PI);
             float strval3 = (float)(currentWindTime * 0.333 * Math.PI);
             float strval4 = (float)(currentWindTime * 0.666 * Math.PI);
             float strbase = 0.1f * ((float)Math.Sin(strval * 0.5));
             float strbase2 = 0.02f * ((float)Math.Sin(strval2 * 0.1));
-
             currentWindVec.X = (float)Math.Sin(strval) * strbase + ((float)Math.Cos(strval3) * strbase2);
             currentWindVec.Y = (float)Math.Cos(strval2) * strbase + ((float)Math.Sin(strval4 - strval3) * strbase2);
         }
 
-
-
-
-
-
-
         public void RenderMarkers(List<MapMarker> batch)
         {
-
             shaders.SetRasterizerMode(context, RasterizerMode.SolidDblSided); //hmm they are backwards
             shaders.SetDepthStencilMode(context, markerdepthclip ? DepthStencilMode.Enabled : DepthStencilMode.DisableAll);
             shaders.SetDefaultBlendState(context);
-
             var shader = shaders.Marker;
             shader.SetShader(context);
             shader.SetInputLayout(context, VertexType.Default);
             shader.SetSceneVars(context, camera, null, globalLights);
-
             MapIcon icon = null;
             foreach (var marker in batch)
             {
@@ -665,9 +601,7 @@ namespace CodeWalker.Rendering
                 shader.SetTexture(context, icon.TexView);
                 markerquad.Draw(context);
             }
-
             shader.UnbindResources(context);
-
         }
 
 
@@ -679,29 +613,21 @@ namespace CodeWalker.Rendering
             {
                 dsmode = DepthStencilMode.DisableAll;
             }
-
             shaders.SetRasterizerMode(context, RasterizerMode.SolidDblSided);
             shaders.SetDepthStencilMode(context, dsmode);
             shaders.SetDefaultBlendState(context);
             shaders.ClearDepth(context, false);
-
             var shader = shaders.Widgets;
-
             widget.Render(context, camera, shader);
         }
-
-
-
 
         public void RenderSelectionEntityPivot(YmapEntityDef ent)
         {
             uint cred = (uint)new Color4(1.0f, 0.0f, 0.0f, 1.0f).ToRgba();
             uint cgrn = (uint)new Color4(0.0f, 1.0f, 0.0f, 1.0f).ToRgba();
             uint cblu = (uint)new Color4(0.0f, 0.0f, 1.0f, 1.0f).ToRgba();
-
             var pos = ent.WidgetPosition;
             var ori = ent.WidgetOrientation;
-
             float pxsize = 120.0f;
             float sssize = pxsize / camera.Height;
             float dist = (pos - camera.Position).Length();
@@ -711,11 +637,9 @@ namespace CodeWalker.Rendering
                 size = sssize * camera.OrthographicSize;
             }
             float rad = size * 0.066f;
-
             RenderSelectionArrowOutline(pos, Vector3.UnitX, Vector3.UnitY, ori, size, rad, cred);
             RenderSelectionArrowOutline(pos, Vector3.UnitY, Vector3.UnitX, ori, size, rad, cgrn);
             RenderSelectionArrowOutline(pos, Vector3.UnitZ, Vector3.UnitY, ori, size, rad, cblu);
-
         }
 
         public void RenderBrushRadiusOutline(Vector3 position, Vector3 dir, Vector3 up, float radius, uint col)
@@ -724,23 +648,19 @@ namespace CodeWalker.Rendering
             const float MaxDeg = 360f;
             const float DegToRad = 0.0174533f;
             const float Ang = DegToRad * MaxDeg / Reso;
-
             var axis = Vector3.Cross(dir, up);
             var c = new VertexTypePC[Reso];
-
             for (var i = 0; i < Reso; i++)
             {
                 var rDir = Quaternion.RotationAxis(dir, i * Ang).Multiply(axis);
                 c[i].Position = position + (rDir * radius);
                 c[i].Colour = col;
             }
-
             for (var i = 0; i < c.Length; i++)
             {
                 SelectionLineVerts.Add(c[i]);
                 SelectionLineVerts.Add(c[(i + 1) % c.Length]);
             }
-
             SelectionLineVerts.Add(new VertexTypePC{Colour = col, Position = position});
             SelectionLineVerts.Add(new VertexTypePC { Colour = col, Position = position + dir * 2f});
         }
@@ -790,7 +710,6 @@ namespace CodeWalker.Rendering
                 c[i].Colour = colour;
                 c[i].Position = pos + ori.Multiply(c[i].Position);
             }
-
             SelectionLineVerts.Add(c[0]);
             SelectionLineVerts.Add(c[1]);
             SelectionLineVerts.Add(c[1]);
@@ -815,7 +734,6 @@ namespace CodeWalker.Rendering
             SelectionLineVerts.Add(c[6]);
             SelectionLineVerts.Add(c[3]);
             SelectionLineVerts.Add(c[7]);
-
             c[0].Position = pos + ori.Multiply(dir * (len + rad * 5.0f));
             c[4].Position += ori.Multiply(d0);
             c[5].Position += ori.Multiply(d1);
@@ -837,8 +755,6 @@ namespace CodeWalker.Rendering
             SelectionLineVerts.Add(c[6]);
             SelectionLineVerts.Add(c[0]);
             SelectionLineVerts.Add(c[7]);
-
-
         }
 
         public void RenderSelectionCircle(Vector3 position, float radius, uint col)
@@ -847,19 +763,16 @@ namespace CodeWalker.Rendering
             const float MaxDeg = 360f;
             const float DegToRad = 0.0174533f;
             const float Ang = DegToRad * MaxDeg / Reso;
-
             var dir = Vector3.Normalize(position - camera.Position);
             var up = Vector3.Normalize(dir.GetPerpVec());
             var axis = Vector3.Cross(dir, up);
             var c = new VertexTypePC[Reso];
-
             for (var i = 0; i < Reso; i++)
             {
                 var rDir = Quaternion.RotationAxis(dir, i * Ang).Multiply(axis);
                 c[i].Position = position + (rDir * radius);
                 c[i].Colour = col;
             }
-
             for (var i = 0; i < c.Length; i++)
             {
                 SelectionLineVerts.Add(c[i]);
@@ -873,9 +786,7 @@ namespace CodeWalker.Rendering
             const float MaxDeg = 360f;
             const float DegToRad = 0.0174533f;
             const float Ang = DegToRad * MaxDeg / Reso;
-
             var c = new VertexTypePC[Reso];
-
             for (var i = 0; i < Reso; i++)
             {
                 var a = i * Ang;
@@ -884,7 +795,6 @@ namespace CodeWalker.Rendering
                 c[i].Position = position + (ax * (x * radius)) + (ay * (y * radius));
                 c[i].Colour = col;
             }
-
             for (var i = 0; i < c.Length; i++)
             {
                 SelectionLineVerts.Add(c[i]);
@@ -897,9 +807,7 @@ namespace CodeWalker.Rendering
             int res = (int)(angle * 0.1f);
             const float DegToRad = 0.0174533f;
             float ang = DegToRad * angle / res;
-
             var c = new VertexTypePC[res+1];
-
             for (var i = 0; i <= res; i++)
             {
                 var a = i * ang;
@@ -908,7 +816,6 @@ namespace CodeWalker.Rendering
                 c[i].Position = position + (ax * (x * radius)) + (ay * (y * radius));
                 c[i].Colour = col;
             }
-
             for (var i = 1; i < c.Length; i++)
             {
                 SelectionLineVerts.Add(c[i-1]);
@@ -952,12 +859,9 @@ namespace CodeWalker.Rendering
             const float MaxDeg = 360f;
             const float DegToRad = 0.0174533f;
             const float Ang = DegToRad * MaxDeg / Reso;
-
             var c = new VertexTypePC[Reso];
             var p = new VertexTypePC() { Position = position, Colour = col };
-
             var circpos = position + (dir * height);
-
             for (var i = 0; i < Reso; i++)
             {
                 var a = i * Ang;
@@ -966,7 +870,6 @@ namespace CodeWalker.Rendering
                 c[i].Position = circpos + (ax * (x * radius)) + (ay * (y * radius));
                 c[i].Colour = col;
             }
-
             for (var i = 0; i < c.Length; i++)
             {
                 SelectionLineVerts.Add(c[i]);
@@ -1029,7 +932,6 @@ namespace CodeWalker.Rendering
         {
             var colblu = (uint)(new Color(0, 0, 255, 255).ToRgba());
             var colwht = (uint)(new Color(255, 255, 255, 255).ToRgba());
-
             var pos = light.Position;
             var dir = light.Direction;
             var tx = light.Tangent;
@@ -1065,10 +967,8 @@ namespace CodeWalker.Rendering
 
         public void RenderSelectionLodLight(YmapLODLight lodlight)
         {
-
             var colblu = (uint)(new Color(0, 0, 255, 255).ToRgba());
             var colwht = (uint)(new Color(255, 255, 255, 255).ToRgba());
-
             var pos = lodlight.Position;
             var dir = lodlight.Direction;
             var tx = lodlight.TangentX;
@@ -1093,8 +993,6 @@ namespace CodeWalker.Rendering
                     RenderSelectionCapsule(pos, tx, ty, dir, extent, outerAngle, colwht);
                     break;
             }
-
-
         }
 
         public void RenderSelectionNavPoly(YnvPoly poly)
@@ -1145,7 +1043,6 @@ namespace CodeWalker.Rendering
             var lastid = endid - 1;
             var vc = ynv.Vertices.Count;
             var startind = ynv.Indices[startid];
-
             ////draw poly outline
             VertexTypePC v = new VertexTypePC();
             v.Colour = colourval;
@@ -1155,7 +1052,6 @@ namespace CodeWalker.Rendering
                 var ind = ynv.Indices[id];
                 if (ind >= vc)
                 { continue; }
-
                 v.Position = ynv.Vertices[ind];
                 SelectionLineVerts.Add(v);
                 if (id == startid)
@@ -1171,8 +1067,6 @@ namespace CodeWalker.Rendering
                     SelectionLineVerts.Add(v0);
                 }
             }
-
-
             ////draw poly triangles
             //VertexTypePC v0 = new VertexTypePC();
             //VertexTypePC v1 = new VertexTypePC();
@@ -1204,10 +1098,8 @@ namespace CodeWalker.Rendering
         {
             var bgeom = poly?.Owner;
             if (bgeom == null) return;
-
             VertexTypePC v = new VertexTypePC();
             v.Colour = colourval;
-
             var ori = Quaternion.Identity;
             var pos = Vector3.Zero;
             var sca = Vector3.One;
@@ -1217,7 +1109,6 @@ namespace CodeWalker.Rendering
                 pos = entity.Position;
                 sca = entity.Scale;
             }
-
             if (poly is BoundPolygonTriangle ptri)
             {
                 var p1 = pos + (ori.Multiply(ptri.Vertex1) * sca);
@@ -1269,12 +1160,10 @@ namespace CodeWalker.Rendering
                 a3 *= pcyl.cylinderRadius;
                 RenderSelectionBox(p1, p2, a2, a3, colourval);
             }
-
         }
 
         public void RenderSelectionGeometry(MapSelectionMode mode)
         {
-
             bool clip = true;
             switch (mode)
             {
@@ -1286,10 +1175,7 @@ namespace CodeWalker.Rendering
                     clip = false;
                     break;
             }
-
-
             shaders.SetDepthStencilMode(context, clip ? DepthStencilMode.Enabled : DepthStencilMode.DisableAll);
-
             var pshader = shaders.Paths;
             if (SelectionTriVerts.Count > 0)
             {
@@ -1299,14 +1185,9 @@ namespace CodeWalker.Rendering
             {
                 pshader.RenderLines(context, SelectionLineVerts, camera, shaders.GlobalLights);
             }
-
-
-
-
             Vector3 coloursel = new Vector3(0, 1, 0) * globalLights.HdrIntensity * 5.0f;
             Vector3 colourwht = new Vector3(1, 1, 1) * globalLights.HdrIntensity * 10.0f;
             var shader = shaders.Bounds;
-
             if ((WhiteBoxes.Count > 0) || (SelectionBoxes.Count > 0))
             {
                 shader.SetMode(BoundsShaderMode.Box);
@@ -1329,7 +1210,6 @@ namespace CodeWalker.Rendering
                 }
                 shader.UnbindResources(context);
             }
-
             if ((WhiteSpheres.Count > 0) || (SelectionSpheres.Count > 0))
             {
                 shader.SetMode(BoundsShaderMode.Sphere);
@@ -1352,17 +1232,13 @@ namespace CodeWalker.Rendering
                 }
                 shader.UnbindResources(context);
             }
-
-
         }
 
 
         public void RenderBounds(MapSelectionMode mode)
         {
             //immediately render the entity bounding boxes/spheres - depending on boundsmode
-
             bool clip = renderboundsclip;
-
             switch (mode)
             {
                 case MapSelectionMode.WaterQuad:
@@ -1372,14 +1248,10 @@ namespace CodeWalker.Rendering
                     clip = false;
                     break;
             }
-
-
             Vector3 colour = new Vector3(0, 0, 1) * globalLights.HdrIntensity;
             Vector3 colourhi = new Vector3(0, 1, 1) * globalLights.HdrIntensity;
-
             shaders.SetDepthStencilMode(context, clip ? DepthStencilMode.Enabled : DepthStencilMode.DisableAll);
             var shader = shaders.Bounds;
-
             if ((BoundingBoxes.Count > 0) || (HilightBoxes.Count > 0))
             {
                 shader.SetMode(BoundsShaderMode.Box);
@@ -1387,7 +1259,6 @@ namespace CodeWalker.Rendering
                 shader.SetInputLayout(context, VertexType.Default);
                 shader.SetSceneVars(context, camera, null, globalLights);
                 shader.SetColourVars(context, new Vector4(colour, 1));
-
                 for (int i = 0; i < BoundingBoxes.Count; i++)
                 {
                     MapBox mb = BoundingBoxes[i];
@@ -1402,7 +1273,6 @@ namespace CodeWalker.Rendering
                     shader.DrawBox(context);
                 }
             }
-
             if ((BoundingSpheres.Count > 0) || (HilightSpheres.Count > 0))
             {
                 shader.SetMode(BoundsShaderMode.Sphere);
@@ -1410,7 +1280,6 @@ namespace CodeWalker.Rendering
                 shader.SetInputLayout(context, VertexType.Default);
                 shader.SetSceneVars(context, camera, null, globalLights);
                 shader.SetColourVars(context, new Vector4(colour, 1));
-
                 for (int i = 0; i < BoundingSpheres.Count; i++)
                 {
                     MapSphere ms = BoundingSpheres[i];
@@ -1425,9 +1294,6 @@ namespace CodeWalker.Rendering
                     shader.DrawSphere(context);
                 }
             }
-
-
-
             shader.UnbindResources(context);
         }
 
@@ -1448,9 +1314,7 @@ namespace CodeWalker.Rendering
 
         private void RenderSkeletons()
         {
-
             skeletonLineVerts.Clear();
-
             const uint cred = 4278190335;// (uint)new Color4(1.0f, 0.0f, 0.0f, 1.0f).ToRgba();
             const uint cgrn = 4278255360;// (uint)new Color4(0.0f, 1.0f, 0.0f, 1.0f).ToRgba();
             const uint cblu = 4294901760;// (uint)new Color4(0.0f, 0.0f, 1.0f, 1.0f).ToRgba();
@@ -1460,28 +1324,23 @@ namespace CodeWalker.Rendering
             vr.Colour = cred;
             vg.Colour = cgrn;
             vb.Colour = cblu;
-
             foreach (var item in renderskeletonlist)
             {
                 YmapEntityDef entity = item.Entity;
                 DrawableBase drawable = item.Renderable.Key;
                 Skeleton skeleton = drawable?.Skeleton;
                 if (skeleton == null) continue;
-
                 Vector3 campos = camera.Position - (entity?.Position ?? Vector3.Zero);
-
                 var pinds = skeleton.ParentIndices;
                 var bones = skeleton.Bones?.Items;
                 if ((pinds == null) || (bones == null)) continue;
                 var xforms = skeleton.Transformations;
-
                 int cnt = Math.Min(pinds.Length, bones.Length);
                 for (int i = 0; i < cnt; i++)
                 {
                     var pind = pinds[i];
                     var bone = bones[i];
                     var pbone = bone.Parent;
-
                     if (xforms != null)//how to use xforms? bind pose?
                     {
                         var xform = (i < xforms.Length) ? xforms[i] : Matrix.Identity;
@@ -1490,41 +1349,32 @@ namespace CodeWalker.Rendering
                     else
                     {
                     }
-
-
                     //draw line from bone's position to parent position...
                     Vector3 lbeg = Vector3.Zero;
                     Vector3 lend = bone.AnimTranslation;// bone.Rotation.Multiply();
-
                     float starsize = (bone.AnimTransform.TranslationVector-campos).Length() * 0.011f;
                     Vector3[] starverts0 = { Vector3.UnitX * starsize, Vector3.UnitY * starsize, Vector3.UnitZ * starsize };
                     Vector3[] starverts1 = { Vector3.UnitX * -starsize, Vector3.UnitY * -starsize, Vector3.UnitZ * -starsize };
                     for (int j = 0; j < 3; j++) starverts0[j] = bone.AnimTransform.MultiplyW(starverts0[j]);
                     for (int j = 0; j < 3; j++) starverts1[j] = bone.AnimTransform.MultiplyW(starverts1[j]);
-
                     if (pbone != null)
                     {
                         lbeg = pbone.AnimTransform.MultiplyW(lbeg);
                         lend = pbone.AnimTransform.MultiplyW(lend);
                     }
-
                     if (entity != null)
                     {
                         lbeg = entity.Position + entity.Orientation.Multiply(lbeg * entity.Scale);
                         lend = entity.Position + entity.Orientation.Multiply(lend * entity.Scale);
-
                         for (int j = 0; j < 3; j++) starverts0[j] = entity.Position + entity.Orientation.Multiply(starverts0[j] * entity.Scale);
                         for (int j = 0; j < 3; j++) starverts1[j] = entity.Position + entity.Orientation.Multiply(starverts1[j] * entity.Scale);
                     }
-
                     vr.Position = starverts0[0]; skeletonLineVerts.Add(vr);
                     vr.Position = starverts1[0]; skeletonLineVerts.Add(vr);
                     vg.Position = starverts0[1]; skeletonLineVerts.Add(vg);
                     vg.Position = starverts1[1]; skeletonLineVerts.Add(vg);
                     vb.Position = starverts0[2]; skeletonLineVerts.Add(vb);
                     vb.Position = starverts1[2]; skeletonLineVerts.Add(vb);
-
-
                     if (pbone != null) //don't draw the origin to root bone line
                     {
                         vg.Position = lbeg;
@@ -1532,21 +1382,12 @@ namespace CodeWalker.Rendering
                         skeletonLineVerts.Add(vg);
                         skeletonLineVerts.Add(vb);
                     }
-
                 }
-
-
             }
-
-
-
-
-
             if (skeletonLineVerts.Count > 0)
             {
                 RenderLines(skeletonLineVerts, DepthStencilMode.DisableAll);
             }
-
         }
 
 
@@ -1557,66 +1398,49 @@ namespace CodeWalker.Rendering
             shaders.Paths.RenderLines(context, linelist, camera, shaders.GlobalLights);
         }
 
-
-
-
-
-
         private void RenderSky()
         {
             if (MapViewEnabled) return;
             if (!renderskydome) return;
             if (!weather.Inited) return;
-
             var shader = shaders.Skydome;
             shader.UpdateSkyLocals(weather, globalLights);
-
-
-
-
             DrawableBase skydomeydr = null;
             YddFile skydomeydd = gameFileCache.GetYdd(2640562617); //skydome hash
             if ((skydomeydd != null) && (skydomeydd.Loaded) && (skydomeydd.Dict != null))
             {
                 skydomeydr = skydomeydd.Dict.Values.FirstOrDefault();
             }
-
             Texture starfield = null;
             Texture moon = null;
             YtdFile skydomeytd = gameFileCache.GetYtd(2640562617); //skydome hash
             if ((skydomeytd != null) && (skydomeytd.Loaded) && (skydomeytd.TextureDict != null) && (skydomeytd.TextureDict.Dict != null))
             {
                 skydomeytd.TextureDict.Dict.TryGetValue(1064311147, out starfield); //starfield hash
-
                 if (rendermoon)
                 {
                     skydomeytd.TextureDict.Dict.TryGetValue(234339206, out moon); //moon-new hash
                 }
             }
-
             Renderable sdrnd = null;
             if (skydomeydr != null)
             {
                 sdrnd = renderableCache.GetRenderable(skydomeydr);
             }
-
             RenderableTexture sftex = null;
             if (starfield != null)
             {
                 sftex = renderableCache.GetRenderableTexture(starfield);
             }
-
             RenderableTexture moontex = null;
             if (moon != null)
             {
                 moontex = renderableCache.GetRenderableTexture(moon);
             }
-
             if ((sdrnd != null) && (sdrnd.IsLoaded) && (sftex != null) && (sftex.IsLoaded))
             {
                 shaders.SetDepthStencilMode(context, DepthStencilMode.DisableAll);
                 shaders.SetRasterizerMode(context, RasterizerMode.Solid);
-
                 RenderableInst rinst = new RenderableInst();
                 rinst.Position = Vector3.Zero;
                 rinst.CamRel = Vector3.Zero;
@@ -1634,33 +1458,23 @@ namespace CodeWalker.Rendering
                 shader.SetInputLayout(context, VertexType.PTT);
                 shader.SetSceneVars(context, camera, null, globalLights);
                 shader.SetEntityVars(context, ref rinst);
-
                 RenderableModel rmod = ((sdrnd.HDModels != null) && (sdrnd.HDModels.Length > 0)) ? sdrnd.HDModels[0] : null;
                 RenderableGeometry rgeom = ((rmod != null) && (rmod.Geometries != null) && (rmod.Geometries.Length > 0)) ? rmod.Geometries[0] : null;
-
                 if ((rgeom != null) && (rgeom.VertexType == VertexType.PTT))
                 {
                     shader.SetModelVars(context, rmod);
                     shader.SetTextures(context, sftex);
-
                     rgeom.Render(context);
                 }
-
                 //shaders.SetRasterizerMode(context, RasterizerMode.SolidDblSided);
                 //shaders.SetDepthStencilMode(context, DepthStencilMode.Enabled);
                 shader.RenderSun(context, camera, weather, globalLights);
-
-
                 if ((rendermoon) && (moontex != null) && (moontex.IsLoaded))
                 {
                     shader.RenderMoon(context, camera, weather, globalLights, moontex);
                 }
-
-
-
                 shader.UnbindResources(context);
             }
-
         }
 
         private void RenderClouds()
@@ -1670,28 +1484,20 @@ namespace CodeWalker.Rendering
             if (!renderskydome) return;
             if (!weather.Inited) return;
             if (!clouds.Inited) return;
-
-
             var shader = shaders.Clouds;
-
             shaders.SetDepthStencilMode(context, DepthStencilMode.DisableAll);
             shaders.SetRasterizerMode(context, RasterizerMode.Solid);
             shaders.SetDefaultBlendState(context);
             //shaders.SetAlphaBlendState(context);
-
             shader.SetShader(context);
             shader.UpdateCloudsLocals(clouds, globalLights);
             shader.SetSceneVars(context, camera, null, globalLights);
-
             var vtype = (VertexType)0;
-
             if (!string.IsNullOrEmpty(individualcloudfrag))
             {
                 //render one cloud fragment.
-
                 CloudHatFrag frag = clouds.HatManager.FindFrag(individualcloudfrag);
                 if (frag == null) return;
-
                 for (int i = 0; i < frag.Layers.Length; i++)
                 {
                     CloudHatFragLayer layer = frag.Layers[i];
@@ -1699,16 +1505,11 @@ namespace CodeWalker.Rendering
                     Archetype arch = gameFileCache.GetArchetype(dhash);
                     if (arch == null)
                     { continue; }
-
                     if (Math.Max(camera.Position.Z, 0.0f) < layer.HeightTigger) continue;
-
                     var (drw, _) = gameFileCache.TryGetDrawableAsync(arch).Result;
                     var rnd = TryGetRenderable(arch, drw);
-
                     if ((rnd == null) || (rnd.IsLoaded == false) || (rnd.AllTexturesLoaded == false))
                     { continue; }
-
-
                     RenderableInst rinst = new RenderableInst();
                     rinst.Position = frag.Position;// Vector3.Zero;
                     rinst.CamRel = Vector3.Zero;// - camera.Position;
@@ -1722,37 +1523,24 @@ namespace CodeWalker.Rendering
                     rinst.TintPaletteIndex = 0;
                     rinst.CastShadow = false;
                     rinst.Renderable = rnd;
-
                     shader.SetEntityVars(context, ref rinst);
-
-
                     for (int mi = 0; mi < rnd.HDModels.Length; mi++)
                     {
                         var model = rnd.HDModels[mi];
-
                         for (int gi = 0; gi < model.Geometries.Length; gi++)
                         {
                             var geom = model.Geometries[gi];
-
                             if (geom.VertexType != vtype)
                             {
                                 vtype = geom.VertexType;
                                 shader.SetInputLayout(context, vtype);
                             }
-
                             shader.SetGeomVars(context, geom);
-
                             geom.Render(context);
                         }
                     }
-
                 }
-
-
             }
-
-
-
         }
 
 
@@ -1769,7 +1557,6 @@ namespace CodeWalker.Rendering
                 }
             }
         }
-
         public void RenderPaths(List<YndFile> ynds)
         {
             foreach (var ynd in ynds)
@@ -1781,7 +1568,6 @@ namespace CodeWalker.Rendering
                 }
             }
         }
-
         public void RenderTrainTracks(List<TrainTrack> tracks)
         {
             foreach (var track in tracks)
@@ -1793,7 +1579,6 @@ namespace CodeWalker.Rendering
                 }
             }
         }
-
         public void RenderNavMeshes(List<YnvFile> ynvs)
         {
             foreach (var ynv in ynvs)
@@ -1814,7 +1599,6 @@ namespace CodeWalker.Rendering
                 shaders.Enqueue(rnd);
             }
         }
-
         public void RenderBasePath(BasePathData basepath)
         {
             RenderablePathBatch rnd = renderableCache.GetRenderablePathBatch(basepath);
@@ -1823,7 +1607,6 @@ namespace CodeWalker.Rendering
                 shaders.Enqueue(rnd);
             }
         }
-
         public void RenderScenarios(List<YmtFile> ymts)
         {
             foreach (var scenario in ymts)
@@ -1844,12 +1627,6 @@ namespace CodeWalker.Rendering
                 shaders.Enqueue(rnd);
             }
         }
-
-
-
-
-
-
         public void RenderWorld(Dictionary<MetaHash, YmapFile> renderworldVisibleYmapDict, IEnumerable<Entity> spaceEnts)
         {
             renderworldentities.Clear();
@@ -1859,15 +1636,12 @@ namespace CodeWalker.Rendering
             ArchetypeRenderables.Clear();
             RequiredParents.Clear();
             RenderEntities.Clear();
-
             foreach (var ymap in renderworldVisibleYmapDict.Values)
             {
                 if (!RenderWorldYmapIsVisible(ymap)) continue;
                 VisibleYmaps.Add(ymap);
             }
             RenderWorldAdjustMapViewCamera();
-
-
             LodManager.MaxLOD = renderworldMaxLOD;
             LodManager.LodDistMult = renderworldDetailDistMult;
             LodManager.MapViewEnabled = MapViewEnabled;
@@ -1876,22 +1650,16 @@ namespace CodeWalker.Rendering
             LodManager.LODLightsEnabled = renderlodlights;
             LodManager.HDLightsEnabled = renderlights;
             LodManager.Update(renderworldVisibleYmapDict, camera, currentElapsedTime, gameFileCache, renderableCache);
-
             foreach (var updatelodlights in LodManager.UpdateLodLights)
             {
                 renderableCache.InvalidateImmediate(updatelodlights);
             }
-
-
             var ents = LodManager.VisibleLeaves;
-
             for (int i = 0; i < ents.Count; i++)
             {
                 var ent = ents[i];
-
                 if (!RenderIsEntityFinalRender(ent))
                 { continue; }
-
                 if (ent.IsMlo)
                 {
                     if (renderinteriors && (ent.MloInstance != null)) //render Mlo child entities...
@@ -1909,7 +1677,6 @@ namespace CodeWalker.Rendering
                     {
                         RenderEntities.Add(ent);
                     }
-
                     var pent = ent.Parent;
                     if (waitforchildrentoload && (pent != null))
                     {
@@ -1937,15 +1704,8 @@ namespace CodeWalker.Rendering
                             RequiredParents[pent] = rndbl;
                         }
                     }
-
-
                 }
             }
-
-
-
-
-
             if (spaceEnts != null)
             {
                 foreach (var ae in spaceEnts) //used by active space entities (eg "bullets")
@@ -1955,9 +1715,6 @@ namespace CodeWalker.Rendering
                     renderworldentities.Add(ae.EntityDef);
                 }
             }
-
-
-
             if (renderentities)
             {
                 for (int i = 0; i < renderworldentities.Count; i++)
@@ -1970,28 +1727,20 @@ namespace CodeWalker.Rendering
                         RenderEntities.Add(ent);
                     }
                 }
-
                 for (int i = 0; i < RenderEntities.Count; i++)
                 {
                     var ent = RenderEntities[i];
-
                     var rndbl = ent.LodManagerRenderable as Renderable;
-
                     if (rndbl != null)
                     {
                         var rent = new RenderableEntity();
                         rent.Entity = ent;
                         rent.Renderable = rndbl;
-
                         if (HideEntities.ContainsKey(ent.EntityHash)) continue; //don't render hidden entities!
-
                         RenderArchetype(ent.Archetype, ent, rent.Renderable, false);
                     }
                 }
             }
-
-
-
             for (int i = 0; i < ents.Count; i++) //make sure to remove the renderable references to avoid hogging memory
             {
                 var ent = ents[i];
@@ -2007,8 +1756,6 @@ namespace CodeWalker.Rendering
                     pcnode = pcnode.Next;
                 }
             }
-
-
             RenderWorldYmapExtras();
         }
 
@@ -2017,18 +1764,12 @@ namespace CodeWalker.Rendering
             renderworldentities.Clear();
             renderworldrenderables.Clear();
             VisibleYmaps.Clear();
-
-
             foreach (var ymap in renderworldVisibleYmapDict.Values)
             {
                 if (!RenderWorldYmapIsVisible(ymap)) continue;
                 VisibleYmaps.Add(ymap);
             }
-
             RenderWorldAdjustMapViewCamera();
-
-
-
             for (int y = 0; y < VisibleYmaps.Count; y++)
             {
                 var ymap = VisibleYmaps[y];
@@ -2063,7 +1804,6 @@ namespace CodeWalker.Rendering
                     }
                 }
             }
-
             for (int y = 0; y < VisibleYmaps.Count; y++)
             {
                 var ymap = VisibleYmaps[y];
@@ -2076,10 +1816,6 @@ namespace CodeWalker.Rendering
                     }
                 }
             }
-
-
-
-
             if (spaceEnts != null)
             {
                 foreach (var ae in spaceEnts) //used by active space entities (eg "bullets")
@@ -2089,8 +1825,6 @@ namespace CodeWalker.Rendering
                     renderworldentities.Add(ae.EntityDef);
                 }
             }
-
-
             if (renderentities)
             {
                 for (int i = 0; i < renderworldentities.Count; i++)
@@ -2117,28 +1851,21 @@ namespace CodeWalker.Rendering
                     var rent = renderworldrenderables[i];
                     var ent = rent.Entity;
                     var arch = ent.Archetype;
-
                     if (HideEntities.ContainsKey(ent.EntityHash)) continue; //don't render hidden entities!
-
                     RenderArchetype(arch, ent, rent.Renderable, false);
                 }
             }
-
             RenderWorldYmapExtras();
         }
         private void RenderWorldCalcEntityVisibility(YmapEntityDef ent)
         {
             float dist = (ent.Position - camera.Position).Length();
-
             if (MapViewEnabled)
             {
                 dist = camera.OrthographicSize / MapViewDetail;
             }
-
-
             var loddist = ent._CEntityDef.lodDist;
             var cloddist = ent._CEntityDef.childLodDist;
-
             if (loddist <= 0.0f)//usually -1 or -2
             {
                 if (ent.Archetype != null)
@@ -2154,8 +1881,6 @@ namespace CodeWalker.Rendering
             {
                 loddist *= renderworldLodDistMult;
             }
-
-
             if (cloddist <= 0)
             {
                 if (ent.Archetype != null)
@@ -2167,14 +1892,9 @@ namespace CodeWalker.Rendering
             {
                 cloddist *= renderworldLodDistMult;
             }
-
-
             ent.Distance = dist;
             ent.IsVisible = (dist <= loddist);
             ent.ChildrenVisible = (dist <= cloddist) && (ent._CEntityDef.numChildren > 0);
-
-
-
             if (renderworldMaxLOD != rage__eLodType.LODTYPES_DEPTH_ORPHANHD)
             {
                 if ((ent._CEntityDef.lodLevel == rage__eLodType.LODTYPES_DEPTH_ORPHANHD) ||
@@ -2216,22 +1936,15 @@ namespace CodeWalker.Rendering
                 if (ent.Archetype != null)
                 {
                     if (!RenderIsEntityFinalRender(ent)) return;
-
-
                     if (!camera.ViewFrustum.ContainsAABBNoClip(ref ent.BBCenter, ref ent.BBExtent))
                     {
                         return;
                     }
-
-
                     renderworldentities.Add(ent);
-
-
                     if (renderinteriors && ent.IsMlo && (ent.MloInstance != null)) //render Mlo child entities...
                     {
                         RenderWorldAddInteriorEntities(ent);
                     }
-
                 }
             }
             if (ent.IsVisible && ent.ChildrenVisible && (ent.Children != null))
@@ -2254,7 +1967,6 @@ namespace CodeWalker.Rendering
                 if ((ymap._CMapData.flags & 1) > 0)
                     return false;
             }
-
             if (!ymap.HasChanged)//don't cull edited project ymaps, because extents may not have been updated!
             {
                 var eemin = ymap._CMapData.entitiesExtentsMin;
@@ -2273,7 +1985,6 @@ namespace CodeWalker.Rendering
                     return false;
                 }
             }
-
             return true;
         }
         private void RenderWorldAddInteriorEntities(YmapEntityDef ent)
@@ -2286,14 +1997,11 @@ namespace CodeWalker.Rendering
                     var intent = ent.MloInstance.Entities[j];
                     if (intent?.Archetype == null) continue; //missing archetype...
                     if (!RenderIsEntityFinalRender(intent)) continue; //proxy or something..
-
                     intent.IsVisible = true;
-
                     if (cancull && !camera.ViewFrustum.ContainsAABBNoClip(ref intent.BBCenter, ref intent.BBExtent))
                     {
                         continue; //frustum cull interior ents
                     }
-
                     renderworldentities.Add(intent);
                 }
             }
@@ -2303,7 +2011,6 @@ namespace CodeWalker.Rendering
                 {
                     var entityset = ent.MloInstance.EntitySets[e];
                     if ((entityset == null) || (!entityset.VisibleOrForced)) continue;
-
                     var entities = entityset.Entities;
                     if (entities == null) continue;
                     for (int i = 0; i < entities.Count; i++)
@@ -2311,16 +2018,12 @@ namespace CodeWalker.Rendering
                         var intent = entities[i];
                         if (intent?.Archetype == null) continue; //missing archetype...
                         if (!RenderIsEntityFinalRender(intent)) continue; //proxy or something..
-
                         intent.IsVisible = true;
-
                         if (cancull && !camera.ViewFrustum.ContainsAABBNoClip(ref intent.BBCenter, ref intent.BBExtent))
                         {
                             continue; //frustum cull interior ents
                         }
-
                         renderworldentities.Add(intent);
-
                     }
                 }
             }
@@ -2338,7 +2041,6 @@ namespace CodeWalker.Rendering
                 float cvwmax = camera.Position.X + cvwidth;
                 float cvhmin = camera.Position.Y - cvheight;
                 float cvhmax = camera.Position.Y + cvheight;
-
                 for (int y = 0; y < VisibleYmaps.Count; y++)
                 {
                     var ymap = VisibleYmaps[y];
@@ -2358,7 +2060,6 @@ namespace CodeWalker.Rendering
                         }
                     }
                 }
-
                 //move the camera closer to the geometry, to help shadows in map view.
                 if (maxZ == float.MinValue) maxZ = 1000.0f;
                 camera.Position.Z = Math.Min(maxZ, 1000.0f);
@@ -2413,14 +2114,10 @@ namespace CodeWalker.Rendering
             }
         }
 
-
-
-
         private bool RenderIsEntityFinalRender(YmapEntityDef ent)
         {
             var arch = ent.Archetype;
             if (arch == null) return false;
-
             bool isshadowproxy = false;
             bool isreflproxy = false;
             uint archflags = arch._BaseArchetypeDef.flags;
@@ -2444,12 +2141,10 @@ namespace CodeWalker.Rendering
             {
                 isshadowproxy = true;
             }
-
             //if ((ent.CEntityDef.flags & 1572864) == 1572864)
             //{
             //    isreflproxy = true;
             //}
-
             switch (ent._CEntityDef.flags)
             {
                 case 135790592: //001000000110000000000000000000    prewater proxy (golf course)
@@ -4146,13 +3841,10 @@ namespace CodeWalker.Rendering
             foreach (var kvp in RootEntities)
             {
                 var ent = kvp.Key;
-
-                RecursePreload(ent);
-
                 if (EntityVisibleAtMaxLodLevel(ent))
                 {
                     ent.LastDist = ent.Distance;
-
+                    ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
                     if (ent.Distance <= (ent.LodDist * LodDistMult))
                     {
                         RecurseAddVisibleLeaves(ent);
@@ -4193,41 +3885,19 @@ namespace CodeWalker.Rendering
         private void RecurseAddVisibleLeaves(YmapEntityDef ent)
         {
             var clist = GetEntityChildren(ent);
-
-            // Always consider rendering the parent entity first.
-            if (EntityVisible(ent))
+            if (clist != null)
             {
-                float fade = 1.0f;
-
-                // Fade out when children are about to appear
-                if (clist != null)
+                var cnode = clist.First;
+                while (cnode != null)
                 {
-                    float fadeDist = ent.ChildLodDist * 0.2f;
-                    float fadeOutStart = ent.ChildLodDist - fadeDist;
-                    if (ent.Distance > fadeOutStart)
-                    {
-                        fade = (ent.ChildLodDist - ent.Distance) / fadeDist;
-                    }
+                    RecurseAddVisibleLeaves(cnode.Value);
+                    cnode = cnode.Next;
                 }
-
-                // Also consider the entity's own LOD distance for fading in
-                if (ent.LodDist > 0)
+            }
+            else
+            {
+                if (EntityVisible(ent))
                 {
-                    float ownFadeDist = ent.LodFadeDist;
-                    float ownFadeInStart = ent.LodDist - ownFadeDist;
-                    if (ent.Distance > ownFadeInStart)
-                    {
-                        float ownFade = (ent.LodDist - ent.Distance) / ownFadeDist;
-                        fade = Math.Min(fade, ownFade); // Combine fades, take the minimum
-                    }
-                }
-
-                fade = Math.Min(1.0f, fade);
-                fade = Math.Max(0.0f, fade);
-
-                if (fade > 0.0f)
-                {
-                    ent.LodFade = fade;
                     VisibleLeaves.Add(ent);
 
                     if (HDLightsEnabled && (ent.Lights != null))
@@ -4239,17 +3909,6 @@ namespace CodeWalker.Rendering
                     }
                 }
             }
-
-            // If children should be rendered, recurse into them.
-            if (clist != null)
-            {
-                var cnode = clist.First;
-                while (cnode != null)
-                {
-                    RecurseAddVisibleLeaves(cnode.Value);
-                    cnode = cnode.Next;
-                }
-            }
         }
 
 
@@ -4258,58 +3917,36 @@ namespace CodeWalker.Rendering
         {
             //get the children list for this entity, if all the hcildren are available, and they are within range
             if (!EntityChildrenVisibleAtMaxLodLevel(ent)) return null;
+
+            bool childrenInRange = ent.Distance <= (ent.ChildLodDist * LodDistMult);
+            if (!childrenInRange) return null;
+
             var clist = ent.LodManagerChildren;
-            if ((clist != null) && (clist.Count >= ent._CEntityDef.numChildren))
+            if (clist == null || clist.Count < ent._CEntityDef.numChildren) return null;
+
+            // Children are in range, now check if they are ready to be rendered.
+            var cnode = clist.First;
+            while (cnode != null)
             {
-                if (ent.Parent != null)//already calculated root entities distance
+                var child = cnode.Value;
+                if (child.Archetype == null) return null;
+
+                var drawableTask = GameFileCache.TryGetDrawableAsync(child.Archetype);
+                if (!drawableTask.IsCompleted) return null;
+
+                var (drawable, waiting) = drawableTask.Result;
+                if (waiting || drawable == null) return null;
+
+                var renderable = RenderableCache.GetRenderable(drawable);
+
+                if (renderable == null || !renderable.IsLoaded)
                 {
-                    ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
+                    return null;
                 }
-
-                bool childrenInRange = ent.Distance <= (ent.ChildLodDist * LodDistMult);
-                if (!childrenInRange)
-                {
-                    var cnode = clist.First;
-                    while (cnode != null)
-                    {
-                        var child = cnode.Value;
-                        child.Distance = MapViewEnabled ? MapViewDist : (child.Position - Position).Length();
-                        if (child.Distance <= (child.LodDist * LodDistMult))
-                        {
-                            childrenInRange = true;
-                            break;
-                        }
-                        cnode = cnode.Next;
-                    }
-                }
-
-                if (childrenInRange)
-                {
-                    // Check if all children are loaded
-                    var cnode = clist.First;
-                    while (cnode != null)
-                    {
-                        var child = cnode.Value;
-                        if (child.Archetype == null) return null; // Child archetype not loaded yet
-
-                        var drawableTask = GameFileCache.TryGetDrawableAsync(child.Archetype);
-                        if (!drawableTask.IsCompleted) return null; // Still loading
-
-                        var (drawable, waiting) = drawableTask.Result;
-                        if (waiting || drawable == null) return null; // Drawable not loaded yet
-
-                        var renderable = RenderableCache.GetRenderable(drawable);
-                        if (renderable == null || !renderable.IsLoaded)// || !renderable.AllTexturesLoaded)
-                        {
-                            return null; // Child renderable or textures not ready yet, so render parent
-                        }
-
-                        cnode = cnode.Next;
-                    }
-                    return clist;
-                }
+                cnode = cnode.Next;
             }
-            return null;
+
+            return clist;
         }
 
         private bool EntityVisible(YmapEntityDef ent)
@@ -4346,40 +3983,6 @@ namespace CodeWalker.Rendering
                 }
             }
             return true;
-        }
-
-        private void RecursePreload(YmapEntityDef ent)
-        {
-            if (ent == null) return;
-            if (!EntityVisibleAtMaxLodLevel(ent)) return;
-
-            ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
-
-            // Preload this entity if it's in the buffer zone
-            float preloadDist = ent.LodDist * 1.2f;
-            if (ent.Distance > ent.LodDist && ent.Distance <= preloadDist)
-            {
-                if (ent.Archetype != null)
-                {
-                    var _ = GameFileCache.TryGetDrawableAsync(ent.Archetype);
-                }
-            }
-
-            // Recurse to children
-            var children = ent.LodManagerChildren;
-            if (children != null)
-            {
-                float childPreloadDist = ent.ChildLodDist * 1.2f;
-                if (ent.Distance <= childPreloadDist) // If we are close enough to consider children...
-                {
-                    var cnode = children.First;
-                    while (cnode != null)
-                    {
-                        RecursePreload(cnode.Value);
-                        cnode = cnode.Next;
-                    }
-                }
-            }
         }
 
 

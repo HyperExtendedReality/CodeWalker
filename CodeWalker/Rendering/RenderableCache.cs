@@ -344,9 +344,9 @@ namespace CodeWalker.Rendering
                         loadeditems.AddLast(item);
                         Interlocked.Add(ref CacheUse, item.DataSize);
                     }
-                    catch //(Exception ex)
+                    catch// (Exception ex)
                     {
-                        //todo: error handling...
+                        item.LoadQueued = false; //allow it to be re-queued
                     }
                 }
                 else
