@@ -20,6 +20,7 @@ namespace CodeWalker.Utils
 
 
         private string _MainText = string.Empty;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string MainText
         {
             get
@@ -32,7 +33,7 @@ namespace CodeWalker.Utils
                 MainTextBox.Text = _MainText;
             }
         }
-
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string PromptText
         {
             get

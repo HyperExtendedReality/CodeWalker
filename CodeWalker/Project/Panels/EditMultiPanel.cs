@@ -14,6 +14,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditMultiPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public MapSelection[] Items { get; set; }
         public MapSelection MultiItem;
 

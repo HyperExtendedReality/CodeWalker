@@ -14,6 +14,7 @@ namespace CodeWalker.Forms
     {
 
         private byte[] data;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public byte[] Data
         {
             get { return data; }
@@ -25,6 +26,7 @@ namespace CodeWalker.Forms
         }
 
         private string fileName;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string FileName
         {
             get { return fileName; }

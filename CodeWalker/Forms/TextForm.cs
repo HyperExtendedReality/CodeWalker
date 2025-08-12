@@ -17,6 +17,7 @@ namespace CodeWalker.Forms
     public partial class TextForm : Form
     {
         private string textValue;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string TextValue
         {
             get { return textValue; }

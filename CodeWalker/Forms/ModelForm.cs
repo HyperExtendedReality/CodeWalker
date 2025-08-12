@@ -59,6 +59,7 @@ namespace CodeWalker.Forms
 
 
         private string fileName;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string FileName
         {
             get { return fileName; }
