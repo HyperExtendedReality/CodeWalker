@@ -127,6 +127,7 @@ namespace ST.Library.UI.NodeEditor
         /// <summary>
         /// Gets or sets the curvature of the connection between Option
         /// </summary>
+        [DefaultValue(0.3f)]
         [Browsable(false)]
         public float Curvature {
             get { return _Curvature; }
@@ -315,6 +316,7 @@ namespace ST.Library.UI.NodeEditor
         /// Gets or sets the background color used by the canvas to draw the Node tag details
         /// </summary>
         [Description("Get or set the background color used for drawing Node tag details on canvas")]
+        [DefaultValue(typeof(Color), "180,0,0,0")]
         public Color MarkBackColor {
             get { return _MarkBackColor; }
             set {
@@ -371,6 +373,7 @@ namespace ST.Library.UI.NodeEditor
         /// Get or set the background color of the edge position hint area in the canvas
         /// </summary>
         [Description("Get or set the background color of the edge position hint area in the canvas")]
+        [DefaultValue(typeof(Color), "120,0,0,0")]
         public Color LocationBackColor {
             get { return _LocationBackColor; }
             set {

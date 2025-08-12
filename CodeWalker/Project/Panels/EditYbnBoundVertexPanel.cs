@@ -14,6 +14,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditYbnBoundVertexPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public BoundVertex CollisionVertex { get; set; }
 
         private bool populatingui = false;

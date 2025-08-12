@@ -19,6 +19,7 @@ namespace CodeWalker.Forms
     public partial class MetaForm : Form
     {
         private string xml;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Xml
         {
             get { return xml; }

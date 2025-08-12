@@ -1,21 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.Threading;
-using System.Diagnostics;
-using System.Linq;
+﻿using CodeWalker.GameFiles;
+using CodeWalker.Project;
+using CodeWalker.Properties;
+using CodeWalker.Rendering;
+using CodeWalker.Tools;
+using CodeWalker.World;
 using SharpDX;
 using SharpDX.XInput;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 using Device = SharpDX.Direct3D11.Device;
 using DeviceContext = SharpDX.Direct3D11.DeviceContext;
-using CodeWalker.World;
-using CodeWalker.Project;
-using CodeWalker.Rendering;
-using CodeWalker.GameFiles;
-using CodeWalker.Properties;
-using CodeWalker.Tools;
 
 namespace CodeWalker
 {
@@ -189,7 +190,7 @@ namespace CodeWalker
         WorldSnapMode SnapModePrev = WorldSnapMode.Ground;//also the default snap mode
         float SnapGridSize = 1.0f;
 
-
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool EditEntityPivot { get; set; } = false;
 
         SettingsForm SettingsForm = null;

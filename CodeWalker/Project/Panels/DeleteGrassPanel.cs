@@ -22,7 +22,9 @@ namespace CodeWalker.Project.Panels
             Any
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ProjectForm ProjectForm { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ProjectFile CurrentProjectFile { get; set; }
 
         public DeleteGrassPanel(ProjectForm projectForm)

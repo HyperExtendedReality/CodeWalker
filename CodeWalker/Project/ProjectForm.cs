@@ -23,8 +23,11 @@ namespace CodeWalker.Project
     {
         public WorldForm WorldForm { get; private set; }
         public ThemeBase Theme { get; private set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ProjectExplorerPanel ProjectExplorer { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ProjectPanel PreviewPanel { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public DeleteGrassPanel DeleteGrassPanel { get; set; }
 
         public GameFileCache GameFileCache { get; private set; }

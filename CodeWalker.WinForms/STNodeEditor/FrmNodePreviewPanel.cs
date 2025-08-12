@@ -12,7 +12,9 @@ namespace ST.Library.UI.NodeEditor
 {
     internal class FrmNodePreviewPanel : Form
     {
+        [DefaultValue(typeof(Color), "DodgerBlue")]
         public Color BorderColor { get; set; }
+        [DefaultValue(true)]
         public bool AutoBorderColor { get; set; }
 
         private bool m_bRight;

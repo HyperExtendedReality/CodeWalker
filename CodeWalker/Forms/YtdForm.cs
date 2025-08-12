@@ -150,26 +150,26 @@ namespace CodeWalker.Forms
             try
             {
                 int cmip = Math.Min(Math.Max(mip, 0), tex.Levels - 1);
-                byte[] pixels = DDSIO.GetPixels(tex, cmip);
+                byte[] pixels = DDSIO.GetPixelsBGRA(tex, cmip);
                 int w = Math.Max(1, tex.Width >> cmip);
                 int h = Math.Max(1, tex.Height >> cmip);
                 Bitmap bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb);
 
                 if (pixels != null)
                 {
-                    // Swap R and B channels for display
-                    for (int i = 0; i < pixels.Length; i += 4)
-                    {
-                        byte tmp = pixels[i]; // B
-                        pixels[i] = pixels[i + 2]; // R
-                        pixels[i + 2] = tmp; // B
-                    }
                     var BoundsRect = new System.Drawing.Rectangle(0, 0, w, h);
                     BitmapData bmpData = bmp.LockBits(BoundsRect, ImageLockMode.WriteOnly, bmp.PixelFormat);
                     IntPtr ptr = bmpData.Scan0;
-                    int bytes = bmpData.Stride * bmp.Height;
-                    int copyBytes = Math.Min(bytes, pixels.Length);
-                    Marshal.Copy(pixels, 0, ptr, copyBytes);
+                    // Copy row by row to respect stride
+                    int srcStride = w * 4;
+                    int dstStride = bmpData.Stride;
+                    int rows = h;
+                    for (int row = 0; row < rows; row++)
+                    {
+                        int srcOffset = row * srcStride;
+                        IntPtr dstRowPtr = IntPtr.Add(ptr, row * dstStride);
+                        Marshal.Copy(pixels, srcOffset, dstRowPtr, srcStride);
+                    }
                     bmp.UnlockBits(bmpData);
                 }
 

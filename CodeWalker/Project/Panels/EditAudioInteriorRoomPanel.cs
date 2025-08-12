@@ -15,6 +15,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditAudioInteriorRoomPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Dat151InteriorRoom CurrentRoom { get; set; }
 
         private bool populatingui = false;

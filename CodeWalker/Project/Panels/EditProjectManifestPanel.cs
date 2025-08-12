@@ -16,7 +16,9 @@ namespace CodeWalker.Project.Panels
 {
     public partial class EditProjectManifestPanel : ProjectPanel
     {
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ProjectForm ProjectForm { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ProjectFile CurrentProjectFile { get; set; }
 
         public EditProjectManifestPanel(ProjectForm projectForm)

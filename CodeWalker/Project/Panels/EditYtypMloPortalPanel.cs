@@ -15,6 +15,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditYtypMloPortalPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public MCMloPortalDef CurrentPortal { get; set; }
 
         private bool populatingui = false;

@@ -14,6 +14,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditYtypMloEntSetPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public MCMloEntitySet CurrentEntitySet { get; set; }
 
         private bool populatingui = false;

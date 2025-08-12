@@ -1883,10 +1883,9 @@ namespace CodeWalker.GameFiles
 
         public static void Indent(StringBuilder sb, int indent)
         {
-            for (int i = 0; i < indent; i++)
-            {
-                sb.Append(" ");
-            }
+            // Use StringBuilder's native multi-append for speed
+            if (indent <= 0) return;
+            sb.Append(' ', indent);
         }
         public static void ErrorXml(StringBuilder sb, int indent, string msg)
         {
@@ -2248,13 +2247,14 @@ namespace CodeWalker.GameFiles
         public static string XmlEscape(string unescaped)
         {
             if (unescaped == null) return null;
-            XmlDocument doc = new XmlDocument();
-            XmlNode node = doc.CreateElement("root");
-            node.InnerText = unescaped;
-            var escaped = node.InnerXml.Replace("\"", "&quot;");
-            if (escaped != unescaped)
-            { }
-            return escaped;
+            // Faster than allocating XmlDocument per call
+            // Order of replacements matters: ampersand first to avoid double-escaping
+            return unescaped
+                .Replace("&", "&amp;")
+                .Replace("<", "&lt;")
+                .Replace(">", "&gt;")
+                .Replace("\"", "&quot;")
+                .Replace("'", "&apos;");
         }
 
 

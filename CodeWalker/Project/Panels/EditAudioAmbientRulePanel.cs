@@ -16,6 +16,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditAudioAmbientRulePanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public AudioPlacement CurrentRule { get; set; }
 
         private bool populatingui = false;

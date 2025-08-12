@@ -20,6 +20,7 @@ namespace CodeWalker.WinForms
         }
 
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Quaternion Value
         {
             get

@@ -46,6 +46,7 @@ namespace CodeWalker.Utils
         }
 
         private string _TitleText = string.Empty;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string TitleText
         {
             get

@@ -1,10 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Windows.Forms;
-using CodeWalker.GameFiles;
+﻿using CodeWalker.GameFiles;
 using CodeWalker.Utils;
 using CodeWalker.World;
 using SharpDX;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Windows.Forms;
 
 // TODO
 // - COMPLETED -- Optimization feature.
@@ -30,7 +31,7 @@ namespace CodeWalker.Project.Panels
             ProjectForm = owner;
             InitializeComponent();
         }
-
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YmapGrassInstanceBatch CurrentBatch { get; set; }
 
         #region Form

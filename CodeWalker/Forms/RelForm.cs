@@ -22,6 +22,7 @@ namespace CodeWalker.Forms
     public partial class RelForm : Form
     {
         private string xml;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Xml
         {
             get { return xml; }

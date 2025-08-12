@@ -25,6 +25,7 @@ namespace CodeWalker.WinForms
 
 
         private bool _readOnly = true;
+        [DefaultValue(true)]
         public bool ReadOnly
         {
             get { return _readOnly; }

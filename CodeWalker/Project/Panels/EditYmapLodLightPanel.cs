@@ -15,6 +15,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditYmapLodLightPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YmapLODLight CurrentLodLight { get; set; }
 
         private bool populatingui = false;

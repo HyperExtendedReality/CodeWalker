@@ -14,6 +14,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditAudioFilePanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public RelFile CurrentFile { get; set; }
 
         private bool populatingui = false;

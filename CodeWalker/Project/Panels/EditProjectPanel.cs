@@ -13,6 +13,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditProjectPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ProjectFile Project { get; set; }
 
         public EditProjectPanel(ProjectForm owner)

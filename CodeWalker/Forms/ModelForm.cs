@@ -68,6 +68,7 @@ namespace CodeWalker.Forms
                 UpdateFormTitle();
             }
         }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string FilePath { get; set; }
 
         YdrFile Ydr = null;

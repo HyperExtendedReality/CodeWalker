@@ -49,6 +49,7 @@ namespace CodeWalker.Utils
         }
 
         /// Gets pixel data from a texture at the specified mip level, decompressing if necessary
+        /// Always returns pixels in R8G8B8A8 (RGBA) order suitable for display
         public static unsafe byte[] GetPixels(Texture texture, int mip)
         {
             if (texture?.Data?.FullData == null)
@@ -87,14 +88,66 @@ namespace CodeWalker.Utils
             WriteDDSHeader(stream, format, texture.Width, texture.Height, clampedMipCount, texture.Depth);
             stream.Write(texture.Data.FullData, 0, offset);
             var ddsBytes = stream.ToArray();
+            
+            // Fast path: for simple 2D uncompressed 32-bit formats, directly slice mip bytes
+            if ((format == DXGI_FORMAT.R8G8B8A8_UNORM || format == DXGI_FORMAT.R8G8B8A8_UNORM_SRGB ||
+                 format == DXGI_FORMAT.B8G8R8A8_UNORM || format == DXGI_FORMAT.B8G8R8A8_UNORM_SRGB)
+                && texture.Depth == 1)
+            {
+                int tWidth = texture.Width;
+                int tHeight = texture.Height;
+                int mcount = clampedMipCount;
+                int safeMip = Math.Min(Math.Max(mip, 0), mcount - 1);
+                int offToMip = 0;
+                for (int m = 0; m < safeMip; m++)
+                {
+                    DXTex.ComputePitch(format, tWidth, tHeight, out _, out long sp, 0);
+                    offToMip += (int)sp;
+                    tWidth = Math.Max(1, tWidth / 2);
+                    tHeight = Math.Max(1, tHeight / 2);
+                }
+                DXTex.ComputePitch(format, tWidth, tHeight, out _, out long targetSlicePitch, 0);
+                int countBytes = (int)targetSlicePitch;
+                if (offToMip + countBytes <= texture.Data.FullData.Length)
+                {
+                    var slice = new byte[countBytes];
+                    Buffer.BlockCopy(texture.Data.FullData, offToMip, slice, 0, countBytes);
+                    if (format == DXGI_FORMAT.B8G8R8A8_UNORM || format == DXGI_FORMAT.B8G8R8A8_UNORM_SRGB)
+                    {
+                        for (int i = 0; i + 3 < slice.Length; i += 4)
+                        {
+                            byte b = slice[i];
+                            byte r = slice[i + 2];
+                            slice[i] = r;
+                            slice[i + 2] = b;
+                        }
+                    }
+                    return slice;
+                }
+            }
+
             fixed (byte* ptr = ddsBytes)
             {
                 using var image = TexHelper.Instance.LoadFromDDSMemory((IntPtr)ptr, ddsBytes.Length, DDS_FLAGS.NONE);
                 int mipCount = (int)image.GetMetadata().MipLevels;
                 int safeMip = Math.Min(Math.Max(mip, 0), mipCount - 1);
-                if (format == DXGI_FORMAT.R8G8B8A8_UNORM || format == DXGI_FORMAT.B8G8R8A8_UNORM)
+                // Fast path for 32-bit formats: convert BGRA->RGBA if needed, otherwise copy
+                if (format == DXGI_FORMAT.R8G8B8A8_UNORM || format == DXGI_FORMAT.R8G8B8A8_UNORM_SRGB)
                 {
                     return ExtractPixels(image.GetImage(safeMip));
+                }
+                if (format == DXGI_FORMAT.B8G8R8A8_UNORM || format == DXGI_FORMAT.B8G8R8A8_UNORM_SRGB)
+                {
+                    var p = ExtractPixels(image.GetImage(safeMip));
+                    // Convert BGRA to RGBA for consumers
+                    for (int i = 0; i + 3 < p.Length; i += 4)
+                    {
+                        byte b = p[i];
+                        byte r = p[i + 2];
+                        p[i] = r;
+                        p[i + 2] = b;
+                    }
+                    return p;
                 }
                 if (IsCompressedFormat(format))
                 {
@@ -107,6 +160,123 @@ namespace CodeWalker.Utils
                 int convMipCount = (int)converted.GetMetadata().MipLevels;
                 int convSafeMip = Math.Min(Math.Max(mip, 0), convMipCount - 1);
                 return ExtractPixels(converted.GetImage(convSafeMip));
+            }
+        }
+
+        /// Gets pixel data suitable for GDI+ Bitmap (BGRA order)
+        public static unsafe byte[] GetPixelsBGRA(Texture texture, int mip)
+        {
+            if (texture?.Data?.FullData == null)
+                throw new ArgumentException("Texture or texture data is null");
+
+            var format = GetDXGIFormat(texture.Format);
+
+            // Calculate how many mips actually fit in FullData
+            int maxPossibleMips = texture.Levels;
+            int dataLen = texture.Data.FullData.Length;
+            int width = texture.Width;
+            int height = texture.Height;
+            int depth = texture.Depth;
+            DXTex.ComputePitch(format, width, height, out long rowPitch0, out long slicePitch0);
+            int mip0Size = (int)(slicePitch0 * depth);
+            if (dataLen < mip0Size)
+                throw new Exception($"Texture data is too small for even the base mip level (expected at least {mip0Size} bytes, got {dataLen}). The texture is corrupted or incomplete.");
+
+            int actualMipCount = 0;
+            int offset = 0;
+            for (int m = 0; m < maxPossibleMips; m++)
+            {
+                DXTex.ComputePitch(format, width, height, out long rowPitch, out long slicePitch);
+                int mipSize = (int)(slicePitch * depth);
+                if (offset + mipSize > dataLen) break;
+                offset += mipSize;
+                actualMipCount++;
+                width = Math.Max(1, width / 2);
+                height = Math.Max(1, height / 2);
+            }
+            int clampedMipCount = Math.Min(texture.Levels, actualMipCount);
+
+            // Create a full DDS in memory for only the available mips
+            using var stream = new MemoryStream();
+            WriteDDSHeader(stream, format, texture.Width, texture.Height, clampedMipCount, texture.Depth);
+            stream.Write(texture.Data.FullData, 0, offset);
+            var ddsBytes = stream.ToArray();
+
+            // Fast path for 32-bit formats to avoid conversions
+            if ((format == DXGI_FORMAT.B8G8R8A8_UNORM || format == DXGI_FORMAT.B8G8R8A8_UNORM_SRGB) && texture.Depth == 1)
+            {
+                int tWidth = texture.Width;
+                int tHeight = texture.Height;
+                int mcount = clampedMipCount;
+                int safeMip = Math.Min(Math.Max(mip, 0), mcount - 1);
+                int offToMip = 0;
+                for (int m = 0; m < safeMip; m++)
+                {
+                    DXTex.ComputePitch(format, tWidth, tHeight, out _, out long sp, 0);
+                    offToMip += (int)sp;
+                    tWidth = Math.Max(1, tWidth / 2);
+                    tHeight = Math.Max(1, tHeight / 2);
+                }
+                DXTex.ComputePitch(format, tWidth, tHeight, out _, out long targetSlicePitch, 0);
+                int countBytes = (int)targetSlicePitch;
+                if (offToMip + countBytes <= texture.Data.FullData.Length)
+                {
+                    var slice = new byte[countBytes];
+                    Buffer.BlockCopy(texture.Data.FullData, offToMip, slice, 0, countBytes);
+                    return slice;
+                }
+            }
+
+            fixed (byte* ptr = ddsBytes)
+            {
+                using var image = TexHelper.Instance.LoadFromDDSMemory((IntPtr)ptr, ddsBytes.Length, DDS_FLAGS.NONE);
+                int mipCount = (int)image.GetMetadata().MipLevels;
+                int safeMip = Math.Min(Math.Max(mip, 0), mipCount - 1);
+                if (format == DXGI_FORMAT.B8G8R8A8_UNORM || format == DXGI_FORMAT.B8G8R8A8_UNORM_SRGB)
+                {
+                    return ExtractPixels(image.GetImage(safeMip));
+                }
+                if (format == DXGI_FORMAT.R8G8B8A8_UNORM || format == DXGI_FORMAT.R8G8B8A8_UNORM_SRGB)
+                {
+                    var p = ExtractPixels(image.GetImage(safeMip));
+                    // Convert RGBA to BGRA
+                    for (int i = 0; i + 3 < p.Length; i += 4)
+                    {
+                        byte r = p[i];
+                        byte b = p[i + 2];
+                        p[i] = b;
+                        p[i + 2] = r;
+                    }
+                    return p;
+                }
+                if (IsCompressedFormat(format))
+                {
+                    using var decompressed = image.Decompress(DXGI_FORMAT.R8G8B8A8_UNORM);
+                    int decMipCount = (int)decompressed.GetMetadata().MipLevels;
+                    int decSafeMip = Math.Min(Math.Max(mip, 0), decMipCount - 1);
+                    var p = ExtractPixels(decompressed.GetImage(decSafeMip));
+                    // Convert RGBA to BGRA
+                    for (int i = 0; i + 3 < p.Length; i += 4)
+                    {
+                        byte r = p[i];
+                        byte b = p[i + 2];
+                        p[i] = b;
+                        p[i + 2] = r;
+                    }
+                    return p;
+                }
+                using var converted = image.Convert(DXGI_FORMAT.R8G8B8A8_UNORM, TEX_FILTER_FLAGS.DEFAULT, 0.5f);
+                int convMipCount = (int)converted.GetMetadata().MipLevels;
+                int convSafeMip = Math.Min(Math.Max(mip, 0), convMipCount - 1);
+                var p2 = ExtractPixels(converted.GetImage(convSafeMip));
+                for (int i = 0; i + 3 < p2.Length; i += 4)
+                {
+                    byte r = p2[i];
+                    byte b = p2[i + 2];
+                    p2[i] = b;
+                    p2[i + 2] = r;
+                }
+                return p2;
             }
         }
 

@@ -14,6 +14,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditYbnPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YbnFile Ybn { get; set; }
 
         //private bool populatingui = false;

@@ -16,6 +16,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditTrainNodePanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public TrainTrackNode TrainNode { get; set; }
 
         private bool populatingui = false;

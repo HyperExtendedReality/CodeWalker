@@ -13,6 +13,7 @@ namespace CodeWalker.Utils
     public partial class KeyBindForm : Form
     {
         private Keys _SelectedKey = Keys.None;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Keys SelectedKey
         {
             get

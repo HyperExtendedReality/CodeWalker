@@ -88,6 +88,7 @@ namespace ST.Library.UI.NodeEditor
         /// Gets or sets the vertical height of the dividing line
         /// </summary>
         [Description("Get or set the vertical height of the dividing line")]
+        [DefaultValue(0)]
         public int Y {
             get { return _Y; }
             set {

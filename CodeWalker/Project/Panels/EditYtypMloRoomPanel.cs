@@ -1,13 +1,15 @@
-﻿using System;
-using System.Windows.Forms;
-using CodeWalker.GameFiles;
+﻿using CodeWalker.GameFiles;
 using SharpDX;
+using System;
+using System.ComponentModel;
+using System.Windows.Forms;
 
 namespace CodeWalker.Project.Panels
 {
     public partial class EditYtypMloRoomPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public MCMloRoomDef CurrentRoom { get; set; }
 
         private bool populatingui = false;

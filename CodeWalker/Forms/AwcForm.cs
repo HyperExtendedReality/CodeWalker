@@ -2,20 +2,23 @@
 using CodeWalker.Utils;
 using FastColoredTextBoxNS;
 using System;
-using System.IO;
+using System.ComponentModel;
 using System.Diagnostics;
-using System.Windows.Forms;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Windows.Forms;
 using Range = FastColoredTextBoxNS.Range;
 
 namespace CodeWalker.Forms
 {
     public partial class AwcForm : Form
     {
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public AwcFile Awc { get; set; }
 
         private string fileName;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string FileName
         {
             get { return fileName; }
@@ -25,6 +28,7 @@ namespace CodeWalker.Forms
                 UpdateFormTitle();
             }
         }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string FilePath { get; set; }
 
         private bool LoadingXml = false;

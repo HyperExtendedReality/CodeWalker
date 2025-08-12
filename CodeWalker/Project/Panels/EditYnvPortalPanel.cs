@@ -15,6 +15,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditYnvPortalPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YnvPortal YnvPortal { get; set; }
 
         private bool populatingui = false;
