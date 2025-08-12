@@ -3361,7 +3361,6 @@ namespace CodeWalker.Rendering
                 rginst.Inst.Radius = radius;
                 rginst.Inst.Distance = distance;
                 rginst.Inst.CastShadow = castshadow;
-                rginst.Inst.LodFade = (entity != null) ? entity.LodFade : 1.0f;
 
 
                 RenderableModel[] models = isselected ? rndbl.AllModels : rndbl.HDModels;
@@ -3400,6 +3399,8 @@ namespace CodeWalker.Rendering
                             if (geom.disableRendering)
                             { continue; } //filter out certain geometries like certain hair parts that shouldn't render by default
                         }
+
+                        geom.LodFade = (entity != null) ? entity.LodFade : 1.0f;
 
                         rginst.Geom = geom;
 
@@ -4143,10 +4144,11 @@ namespace CodeWalker.Rendering
                 var ent = kvp.Key;
                 if (EntityVisibleAtMaxLodLevel(ent))
                 {
+                    ent.LastDist = ent.Distance;
                     ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
                     if (ent.Distance <= (ent.LodDist * LodDistMult))
                     {
-                        RecurseAddVisibleLeaves(ent, 1.0f);
+                        RecurseAddVisibleLeaves(ent);
                     }
                 }
             }
@@ -4181,33 +4183,15 @@ namespace CodeWalker.Rendering
             VisibleLightsPrev = vl;
         }
 
-        private void RecurseAddVisibleLeaves(YmapEntityDef ent, float parentFade = 1.0f)
+        private void RecurseAddVisibleLeaves(YmapEntityDef ent)
         {
             var clist = GetEntityChildren(ent);
-            float fade = 1.0f;
-            float childfade = 1.0f;
-            if (ent.LodDist > 0)
-            {
-                fade = 1.0f - (ent.Distance - (ent.LodDist - ent.LodFadeDist)) / ent.LodFadeDist;
-            }
-            if (ent.ChildLodDist > 0)
-            {
-                childfade = (ent.Distance - (ent.ChildLodDist - ent.LodFadeDist)) / ent.LodFadeDist;
-            }
-            fade = Math.Min(1.0f, fade);
-            fade = Math.Max(0.0f, fade);
-            childfade = Math.Min(1.0f, childfade);
-            childfade = Math.Max(0.0f, childfade);
-
-            ent.LodFade = fade * parentFade;
-
-
             if (clist != null)
             {
                 var cnode = clist.First;
                 while (cnode != null)
                 {
-                    RecurseAddVisibleLeaves(cnode.Value, childfade * parentFade);
+                    RecurseAddVisibleLeaves(cnode.Value);
                     cnode = cnode.Next;
                 }
             }
@@ -4215,6 +4199,16 @@ namespace CodeWalker.Rendering
             {
                 if (EntityVisible(ent))
                 {
+                    float fade = 1.0f;
+                    if (ent.LodDist > 0)
+                    {
+                        fade = 1.0f - (ent.Distance - (ent.LodDist - ent.LodFadeDist)) / ent.LodFadeDist;
+                    }
+                    fade = Math.Min(1.0f, fade);
+                    fade = Math.Max(0.0f, fade);
+                    ent.LodFade = fade;
+
+
                     VisibleLeaves.Add(ent);
 
                     if (HDLightsEnabled && (ent.Lights != null))
@@ -4244,6 +4238,20 @@ namespace CodeWalker.Rendering
                 if (ent.Distance <= (ent.ChildLodDist * LodDistMult))
                 {
                     return clist;
+                }
+                else
+                {
+                    var cnode = clist.First;
+                    while (cnode != null)
+                    {
+                        var child = cnode.Value;
+                        child.Distance = MapViewEnabled ? MapViewDist : (child.Position - Position).Length();
+                        if (child.Distance <= (child.LodDist * LodDistMult))
+                        {
+                            return clist;
+                        }
+                        cnode = cnode.Next;
+                    }
                 }
             }
             return null;

@@ -27,13 +27,11 @@ namespace CodeWalker.Rendering
         public Vector3 Scale;
         public uint TintPaletteIndex;
         public bool CastShadow;
-        public float LodFade;
     }
     public struct RenderableGeometryInst
     {
         public RenderableGeometry Geom;
         public RenderableInst Inst;
-        public float LodFade = 1.0f;
     }
     public struct RenderableLightInst
     {
@@ -68,7 +66,6 @@ namespace CodeWalker.Rendering
         public YtdFile[] SDtxds;
         public YtdFile[] HDtxds;
         public bool AllTexturesLoaded = false;
-        public float Fade = 1.0f;
 
         public RenderableModel[] HDModels;
         public RenderableModel[] MedModels;
@@ -833,6 +830,7 @@ namespace CodeWalker.Rendering
         public RenderableTexture[] RenderableTexturesHD;
         public ShaderParamNames[] TextureParamHashes;
         public PrimitiveTopology Topology { get; set; }
+        public float LodFade = 1.0f;
         public bool IsFragment = false;
         public bool IsEmissive { get; set; } = false;
         public bool EnableWind { get; set; } = false;

@@ -1696,6 +1696,7 @@ namespace CodeWalker.GameFiles
 
         public int Index { get; set; }
         public float Distance { get; set; } //used for rendering
+        public float LastDist { get; set; } = 0.0f;
         public bool IsVisible; //used for rendering
         public bool ChildrenVisible; //used for rendering
         public bool ChildrenRendered; //used when rendering ymap mode to reduce LOD flashing...
