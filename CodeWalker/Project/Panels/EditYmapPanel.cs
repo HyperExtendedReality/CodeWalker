@@ -17,6 +17,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditYmapPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YmapFile Ymap { get; set; }
 
         private bool populatingui = false;

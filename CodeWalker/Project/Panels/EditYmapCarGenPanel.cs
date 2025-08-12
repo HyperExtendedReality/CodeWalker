@@ -15,6 +15,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditYmapCarGenPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YmapCarGen CurrentCarGen { get; set; }
 
         private bool populatingui = false;

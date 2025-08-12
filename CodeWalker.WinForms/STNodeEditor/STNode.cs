@@ -6,6 +6,7 @@ using System.Text;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Collections;
+using System.ComponentModel;
 /*
 MIT License
 

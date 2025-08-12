@@ -15,6 +15,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditYmapBoxOccluderPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YmapBoxOccluder CurrentBoxOccluder { get; set; }
 
         private bool populatingui = false;

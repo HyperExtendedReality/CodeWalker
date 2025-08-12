@@ -14,7 +14,9 @@ namespace CodeWalker.Project.Panels
     public partial class EditYmapOccludeModelPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YmapOccludeModel CurrentOccludeModel { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YmapOccludeModelTriangle CurrentTriangle { get; set; }
 
         private bool populatingui = false;

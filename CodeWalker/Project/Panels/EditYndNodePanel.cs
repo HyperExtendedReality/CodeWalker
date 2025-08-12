@@ -15,8 +15,11 @@ namespace CodeWalker.Project.Panels
     public partial class EditYndNodePanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YndNode CurrentPathNode { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YndLink CurrentPathLink { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YndFile CurrentYndFile { get; set; }
 
         private bool populatingui = false;

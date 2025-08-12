@@ -15,8 +15,11 @@ namespace CodeWalker.Utils
     public partial class SelectFolderForm : Form
     {
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string SelectedFolder { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool IsGen9 { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public DialogResult Result { get; set; } = DialogResult.Cancel;
 
         public SelectFolderForm()

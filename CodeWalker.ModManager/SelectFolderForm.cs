@@ -15,7 +15,9 @@ namespace CodeWalker.ModManager
     public partial class SelectFolderForm : Form
     {
         public SettingsFile Settings;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string SelectedFolder { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool IsGen9 { get; set; }
 
         public SelectFolderForm(SettingsFile settings)

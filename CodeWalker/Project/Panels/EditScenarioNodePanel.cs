@@ -16,8 +16,11 @@ namespace CodeWalker.Project.Panels
     public partial class EditScenarioNodePanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ScenarioNode CurrentScenarioNode { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YmtFile CurrentScenario { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public MCScenarioChainingEdge CurrentScenarioChainEdge { get; set; }
 
         private bool populatingui = false;

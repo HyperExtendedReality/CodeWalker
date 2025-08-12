@@ -17,6 +17,7 @@ namespace CodeWalker.Forms
 
         private string fileName;
         private YvrFile yvr;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string FileName
         {
             get { return fileName; }
@@ -26,6 +27,7 @@ namespace CodeWalker.Forms
                 UpdateFormTitle();
             }
         }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string FilePath { get; set; }
 
 

@@ -16,6 +16,7 @@ using CodeWalker.Rendering;
 using CodeWalker.GameFiles;
 using CodeWalker.Properties;
 using CodeWalker.Tools;
+using System.ComponentModel;
 
 namespace CodeWalker
 {
@@ -190,6 +191,7 @@ namespace CodeWalker
         float SnapGridSize = 1.0f;
 
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool EditEntityPivot { get; set; } = false;
 
         SettingsForm SettingsForm = null;

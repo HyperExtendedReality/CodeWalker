@@ -12,6 +12,7 @@ namespace CodeWalker.Utils
 {
     public partial class ColourPickerForm : Form
     {
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Color SelectedColour
         {
             get => Picker.SelectedColour;

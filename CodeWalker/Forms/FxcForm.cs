@@ -16,6 +16,7 @@ namespace CodeWalker.Forms
         private FxcFile Fxc;
 
         private string fileName;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string FileName
         {
             get { return fileName; }
@@ -25,6 +26,7 @@ namespace CodeWalker.Forms
                 UpdateFormTitle();
             }
         }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string FilePath { get; set; }
 
 

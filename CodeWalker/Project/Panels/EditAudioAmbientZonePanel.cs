@@ -2,6 +2,7 @@
 using CodeWalker.World;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 
@@ -10,6 +11,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditAudioAmbientZonePanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public AudioPlacement CurrentZone { get; set; }
 
         private bool populatingui = false;

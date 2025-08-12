@@ -19,7 +19,9 @@ namespace CodeWalker.Project.Panels
 {
     public partial class GenerateNavMeshPanel : ProjectPanel
     {
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ProjectForm ProjectForm { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ProjectFile CurrentProjectFile { get; set; }
 
         public GenerateNavMeshPanel(ProjectForm projectForm)

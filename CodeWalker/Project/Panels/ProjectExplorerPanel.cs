@@ -16,7 +16,9 @@ namespace CodeWalker.Project.Panels
 {
     public partial class ProjectExplorerPanel : ProjectPanel
     {
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ProjectForm ProjectForm { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ProjectFile CurrentProjectFile { get; set; }
 
         private bool inDoubleClick = false; //used in disabling double-click to expand tree nodes

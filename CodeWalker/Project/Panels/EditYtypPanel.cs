@@ -14,6 +14,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditYtypPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YtypFile Ytyp { get; set; }
 
         //private bool populatingui = false;

@@ -15,6 +15,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditScenarioYmtPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YmtFile CurrentScenario { get; set; }
 
         private bool populatingui = false;

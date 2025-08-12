@@ -17,6 +17,7 @@ namespace CodeWalker.Forms
     public partial class TextForm : Form
     {
         private string textValue;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string TextValue
         {
             get { return textValue; }
@@ -28,6 +29,7 @@ namespace CodeWalker.Forms
         }
 
         private string fileName;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string FileName
         {
             get { return fileName; }
@@ -37,6 +39,7 @@ namespace CodeWalker.Forms
                 UpdateFormTitle();
             }
         }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string FilePath { get; set; }
 
         private bool modified = false;

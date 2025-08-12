@@ -1,6 +1,7 @@
 ﻿using CodeWalker.GameFiles;
 using SharpDX;
 using System;
+using System.ComponentModel;
 using System.Windows.Forms;
 
 namespace CodeWalker.Project.Panels
@@ -8,7 +9,9 @@ namespace CodeWalker.Project.Panels
     public partial class EditYmapEntityPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public YmapEntityDef CurrentEntity { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public MCEntityDef CurrentMCEntity { get; set; }
 
         private bool populatingui = false;

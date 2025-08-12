@@ -14,11 +14,17 @@ namespace CodeWalker.Project.Panels
     public partial class EditYbnBoundPolyPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public BoundPolygon CollisionPoly { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public BoundPolygonTriangle CollisionTriangle { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public BoundPolygonSphere CollisionSphere { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public BoundPolygonCapsule CollisionCapsule { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public BoundPolygonBox CollisionBox { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public BoundPolygonCylinder CollisionCylinder { get; set; }
 
         private bool populatingui = false;

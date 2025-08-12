@@ -1,8 +1,9 @@
-﻿using System;
+﻿using CodeWalker.GameFiles;
+using SharpDX;
+using System;
+using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Forms;
-using CodeWalker.GameFiles;
-using SharpDX;
 
 namespace CodeWalker.Project.Panels
 {
@@ -19,6 +20,7 @@ namespace CodeWalker.Project.Panels
             ProjectForm = owner;
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Archetype CurrentArchetype { get; set; }
 
         private void EditYtypArchetypePanel_Load(object sender, EventArgs e)

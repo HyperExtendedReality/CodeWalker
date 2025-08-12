@@ -20,6 +20,7 @@ namespace CodeWalker.Utils
 {
     public partial class ColourPicker : UserControl
     {
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Color SelectedColour
         {
             get => Colour;

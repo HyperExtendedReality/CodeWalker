@@ -20,6 +20,7 @@ namespace CodeWalker.Utils
 
 
         private string _MainText = string.Empty;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string MainText
         {
             get
@@ -33,6 +34,7 @@ namespace CodeWalker.Utils
             }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string PromptText
         {
             get
@@ -46,6 +48,7 @@ namespace CodeWalker.Utils
         }
 
         private string _TitleText = string.Empty;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string TitleText
         {
             get

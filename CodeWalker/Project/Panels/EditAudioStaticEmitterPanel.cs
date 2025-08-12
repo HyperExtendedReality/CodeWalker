@@ -16,6 +16,7 @@ namespace CodeWalker.Project.Panels
     public partial class EditAudioStaticEmitterPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public AudioPlacement CurrentEmitter { get; set; }
 
         private bool populatingui = false;

@@ -15,7 +15,9 @@ namespace CodeWalker.Project.Panels
     public partial class EditYbnBoundsPanel : ProjectPanel
     {
         public ProjectForm ProjectForm;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Bounds CollisionBounds { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public BoundGeometry CollisionGeom { get; set; }
 
         private bool populatingui = false;
