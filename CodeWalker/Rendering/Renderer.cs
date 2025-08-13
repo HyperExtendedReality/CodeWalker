@@ -1636,12 +1636,15 @@ namespace CodeWalker.Rendering
             ArchetypeRenderables.Clear();
             RequiredParents.Clear();
             RenderEntities.Clear();
+
             foreach (var ymap in renderworldVisibleYmapDict.Values)
             {
                 if (!RenderWorldYmapIsVisible(ymap)) continue;
                 VisibleYmaps.Add(ymap);
             }
             RenderWorldAdjustMapViewCamera();
+
+
             LodManager.MaxLOD = renderworldMaxLOD;
             LodManager.LodDistMult = renderworldDetailDistMult;
             LodManager.MapViewEnabled = MapViewEnabled;
@@ -1650,16 +1653,22 @@ namespace CodeWalker.Rendering
             LodManager.LODLightsEnabled = renderlodlights;
             LodManager.HDLightsEnabled = renderlights;
             LodManager.Update(renderworldVisibleYmapDict, camera, currentElapsedTime, gameFileCache, renderableCache);
+
             foreach (var updatelodlights in LodManager.UpdateLodLights)
             {
                 renderableCache.InvalidateImmediate(updatelodlights);
             }
+
+
             var ents = LodManager.VisibleLeaves;
+
             for (int i = 0; i < ents.Count; i++)
             {
                 var ent = ents[i];
+
                 if (!RenderIsEntityFinalRender(ent))
                 { continue; }
+
                 if (ent.IsMlo)
                 {
                     if (renderinteriors && (ent.MloInstance != null)) //render Mlo child entities...
@@ -1677,6 +1686,7 @@ namespace CodeWalker.Rendering
                     {
                         RenderEntities.Add(ent);
                     }
+
                     var pent = ent.Parent;
                     if (waitforchildrentoload && (pent != null))
                     {
@@ -1704,8 +1714,15 @@ namespace CodeWalker.Rendering
                             RequiredParents[pent] = rndbl;
                         }
                     }
+
+
                 }
             }
+
+
+
+
+
             if (spaceEnts != null)
             {
                 foreach (var ae in spaceEnts) //used by active space entities (eg "bullets")
@@ -1715,6 +1732,9 @@ namespace CodeWalker.Rendering
                     renderworldentities.Add(ae.EntityDef);
                 }
             }
+
+
+
             if (renderentities)
             {
                 for (int i = 0; i < renderworldentities.Count; i++)
@@ -1727,20 +1747,28 @@ namespace CodeWalker.Rendering
                         RenderEntities.Add(ent);
                     }
                 }
+
                 for (int i = 0; i < RenderEntities.Count; i++)
                 {
                     var ent = RenderEntities[i];
+
                     var rndbl = ent.LodManagerRenderable as Renderable;
+
                     if (rndbl != null)
                     {
                         var rent = new RenderableEntity();
                         rent.Entity = ent;
                         rent.Renderable = rndbl;
+
                         if (HideEntities.ContainsKey(ent.EntityHash)) continue; //don't render hidden entities!
+
                         RenderArchetype(ent.Archetype, ent, rent.Renderable, false);
                     }
                 }
             }
+
+
+
             for (int i = 0; i < ents.Count; i++) //make sure to remove the renderable references to avoid hogging memory
             {
                 var ent = ents[i];
@@ -1756,6 +1784,8 @@ namespace CodeWalker.Rendering
                     pcnode = pcnode.Next;
                 }
             }
+
+
             RenderWorldYmapExtras();
         }
 
