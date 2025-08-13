@@ -1506,7 +1506,9 @@ namespace CodeWalker.Rendering
                     if (arch == null)
                     { continue; }
                     if (Math.Max(camera.Position.Z, 0.0f) < layer.HeightTigger) continue;
-                    var (drw, _) = gameFileCache.TryGetDrawableAsync(arch).Result;
+                    var drawableTask = gameFileCache.TryGetDrawableAsync(arch);
+                    if (!drawableTask.IsCompleted) continue;
+                    var (drw, _) = drawableTask.Result;
                     var rnd = TryGetRenderable(arch, drw);
                     if ((rnd == null) || (rnd.IsLoaded == false) || (rnd.AllTexturesLoaded == false))
                     { continue; }
@@ -1862,18 +1864,22 @@ namespace CodeWalker.Rendering
                     var ent = renderworldentities[i];
                     var arch = ent.Archetype;
                     var pent = ent.Parent;
-                    var (drawable, _) = gameFileCache.TryGetDrawableAsync(arch).Result;
-                    Renderable rndbl = TryGetRenderable(arch, drawable);
-                    if ((rndbl != null) && rndbl.IsLoaded && (rndbl.AllTexturesLoaded || !waitforchildrentoload))
+                    var drawableTask = gameFileCache.TryGetDrawableAsync(arch);
+                    if (drawableTask.IsCompleted)
                     {
-                        RenderableEntity rent = new RenderableEntity();
-                        rent.Entity = ent;
-                        rent.Renderable = rndbl;
-                        renderworldrenderables.Add(rent);
-                    }
-                    else if (waitforchildrentoload)
-                    {
-                        //todo: render parent if children loading.......
+                        var (drawable, _) = drawableTask.Result;
+                        Renderable rndbl = TryGetRenderable(arch, drawable);
+                        if ((rndbl != null) && rndbl.IsLoaded && (rndbl.AllTexturesLoaded || !waitforchildrentoload))
+                        {
+                            RenderableEntity rent = new RenderableEntity();
+                            rent.Entity = ent;
+                            rent.Renderable = rndbl;
+                            renderworldrenderables.Add(rent);
+                        }
+                        else if (waitforchildrentoload)
+                        {
+                            //todo: render parent if children loading.......
+                        }
                     }
                 }
                 for (int i = 0; i < renderworldrenderables.Count; i++)
@@ -2233,7 +2239,12 @@ namespace CodeWalker.Rendering
             Renderable rndbl = null;
             if (!ArchetypeRenderables.TryGetValue(arch, out rndbl))
             {
-                var (drawable, _) = gameFileCache.TryGetDrawableAsync(arch).Result;
+                var drawableTask = gameFileCache.TryGetDrawableAsync(arch);
+                if (!drawableTask.IsCompleted)
+                {
+                    return null;
+                }
+                var (drawable, _) = drawableTask.Result;
                 rndbl = TryGetRenderable(arch, drawable);
                 ArchetypeRenderables[arch] = rndbl;
             }
@@ -2416,7 +2427,9 @@ namespace CodeWalker.Rendering
                 }
 
                 var arch = batch.Archetype;
-                var (drbl, _) = gameFileCache.TryGetDrawableAsync(arch).Result;
+                var drawableTask = gameFileCache.TryGetDrawableAsync(arch);
+                if (!drawableTask.IsCompleted) continue;
+                var (drbl, _) = drawableTask.Result;
                 var rndbl = TryGetRenderable(arch, drbl);
                 var instb = renderableCache.GetRenderableInstanceBatch(batch);
                 if (rndbl == null) continue; //no renderable
@@ -2861,7 +2874,12 @@ namespace CodeWalker.Rendering
             bool res = false;
             if (rndbl == null)
             {
-                var (drawable, _) = gameFileCache.TryGetDrawableAsync(arche).Result;
+                var drawableTask = gameFileCache.TryGetDrawableAsync(arche);
+                if (!drawableTask.IsCompleted)
+                {
+                    return false; //can't render it yet...
+                }
+                var (drawable, _) = drawableTask.Result;
                 rndbl = TryGetRenderable(arche, drawable);
             }
 
