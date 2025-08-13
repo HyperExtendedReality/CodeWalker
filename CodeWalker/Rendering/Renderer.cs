@@ -1706,9 +1706,10 @@ namespace CodeWalker.Rendering
                             }
                             if (!allok)
                             {
-                                rndbl = GetArchetypeRenderable(pent.Archetype);
-                                pent.LodManagerRenderable = rndbl;
-                                if (rndbl != null)
+                                var (parentDrawable, _) = gameFileCache.TryGetDrawableAsync(pent.Archetype).Result;
+                                var parentRndbl = TryGetRenderable(pent.Archetype, parentDrawable);
+                                pent.LodManagerRenderable = parentRndbl;
+                                if (parentRndbl != null)
                                 {
                                     RenderEntities.Add(pent);
                                 }
