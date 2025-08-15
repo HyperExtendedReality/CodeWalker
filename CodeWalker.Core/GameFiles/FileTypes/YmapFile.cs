@@ -1703,6 +1703,8 @@ namespace CodeWalker.GameFiles
         public bool IsVisible; //used for rendering
         public bool ChildrenVisible; //used for rendering
         public bool ChildrenRendered; //used when rendering ymap mode to reduce LOD flashing...
+        public ulong ChildrenRenderableFrame;
+        public bool ChildrenRenderable;
         public float LodFade = 0.0f;
         public YmapEntityDef Parent { get; set; } //for browsing convenience, also used/updated for rendering
         public MetaHash ParentName { get; set; } //just for browsing convenience
