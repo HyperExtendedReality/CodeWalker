@@ -178,6 +178,7 @@ namespace CodeWalker.Rendering
         private readonly System.Collections.Concurrent.ConcurrentBag<RenderableEntity> renderableEntityPool = new System.Collections.Concurrent.ConcurrentBag<RenderableEntity>();
         private readonly List<RenderableEntity> reusableRenderEntities = new List<RenderableEntity>(512);
         private readonly List<YmapEntityDef> reusableWorldEntities = new List<YmapEntityDef>(512);
+        private readonly System.Collections.Concurrent.ConcurrentBag<YmapEntityDef> pendingEntities = new System.Collections.Concurrent.ConcurrentBag<YmapEntityDef>();
 
         // LOD optimization
         private const float MinLodDistMult = 0.5f;
@@ -1673,6 +1674,18 @@ namespace CodeWalker.Rendering
             // Query visible entities from the spatial grid
             entitySpatialGrid.Query(camera.ViewFrustum, reusableVisibleEntities);
 
+            if (!pendingEntities.IsEmpty)
+            {
+                var visibleSet = new HashSet<YmapEntityDef>(reusableVisibleEntities);
+                YmapEntityDef pendingEnt;
+                while (pendingEntities.TryTake(out pendingEnt))
+                {
+                    visibleSet.Add(pendingEnt);
+                }
+                reusableVisibleEntities.Clear();
+                reusableVisibleEntities.AddRange(visibleSet);
+            }
+
             // Optimized LOD calculations
             foreach (var ent in reusableVisibleEntities)
             {
@@ -1909,7 +1922,7 @@ namespace CodeWalker.Rendering
 
         private void QueueForLaterLoading(YmapEntityDef ent)
         {
-            // TODO: Implement this
+            pendingEntities.Add(ent);
         }
 
 
