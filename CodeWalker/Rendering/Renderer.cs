@@ -1688,7 +1688,7 @@ namespace CodeWalker.Rendering
             }
 
             // Background loading of resources
-            Task.Run(() => LoadResourcesInBackground(reusableWorldEntities));
+            Task.Run(() => LoadResourcesInBackgroundAsync(reusableWorldEntities));
 
 
             LodManager.MaxLOD = renderworldMaxLOD;
@@ -3619,12 +3619,6 @@ namespace CodeWalker.Rendering
 
             rndbl.AllTexturesLoaded = alltexsloaded;
             return rndbl;
-        }
-
-        public string GetPerformanceStats()
-        {
-            double avgFrameTime = frameCount > 0 ? totalFrameTime / (double)frameCount : 0;
-            return $"FPS: {fps} | Avg Frame: {avgFrameTime:0.00}ms | Entities: {reusableVisibleEntities.Count}";
         }
 
     }
