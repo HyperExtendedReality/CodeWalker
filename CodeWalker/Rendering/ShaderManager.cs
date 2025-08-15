@@ -1005,6 +1005,11 @@ namespace CodeWalker.Rendering
         {
             context.OutputMerger.BlendState = bsDefault;
         }
+
+        public void SetLodTransitionAlpha(DeviceContext context, float lodTransitionFactor)
+        {
+            Basic.SetLodTransitionAlpha(context, lodTransitionFactor);
+        }
         public void SetAlphaBlendState(DeviceContext context)
         {
             context.OutputMerger.BlendState = bsAlpha;

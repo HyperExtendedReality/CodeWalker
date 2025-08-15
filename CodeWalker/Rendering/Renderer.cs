@@ -36,7 +36,7 @@ namespace CodeWalker.Rendering
         private int framecount = 0;
         private float fcelapsed = 0.0f;
         private int fps = 0;
-        private ulong totalFrameCount = 0;
+        internal ulong totalFrameCount = 0;
 
         private DeviceContext context;
 
@@ -1688,7 +1688,7 @@ namespace CodeWalker.Rendering
             }
 
             // Background loading of resources
-            Task.Run(() => LoadResourcesInBackgroundAsync(reusableWorldEntities));
+            Task.Run(() => LoadResourcesInBackground(reusableWorldEntities));
 
 
             LodManager.MaxLOD = renderworldMaxLOD;
@@ -3619,6 +3619,12 @@ namespace CodeWalker.Rendering
 
             rndbl.AllTexturesLoaded = alltexsloaded;
             return rndbl;
+        }
+
+        public string GetPerformanceStats()
+        {
+            double avgFrameTime = frameCount > 0 ? totalFrameTime / (double)frameCount : 0;
+            return $"FPS: {fps} | Avg Frame: {avgFrameTime:0.00}ms | Entities: {reusableVisibleEntities.Count}";
         }
 
     }

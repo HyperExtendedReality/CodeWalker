@@ -77,7 +77,7 @@ namespace CodeWalker.Rendering
         public uint SpecOnly;
         public Vector4 TextureAlphaMask;
         public float LodFade;
-        public float pad0;
+        public float LodTransitionAlpha;
         public float pad1;
         public float pad2;
     }
@@ -603,6 +603,11 @@ namespace CodeWalker.Rendering
             VSModelVars.Vars.Transform = Matrix.Transpose(model.Transform);
             VSModelVars.Update(context);
             VSModelVars.SetVSCBuffer(context, 3);
+        }
+
+        public void SetLodTransitionAlpha(DeviceContext context, float alpha)
+        {
+            PSGeomVars.Vars.LodTransitionAlpha = alpha;
         }
 
         public override void SetGeomVars(DeviceContext context, RenderableGeometry geom)
