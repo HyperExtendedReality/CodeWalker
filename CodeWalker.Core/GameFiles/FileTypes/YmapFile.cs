@@ -1678,8 +1678,6 @@ namespace CodeWalker.GameFiles
         public float ChildLodDist;
         public float LodFadeDist;
         public YmapEntityDef LastRenderable { get; set; }
-        public float LodFade = 1.0f;
-
 
         public CEntityDef _CEntityDef;
         public CEntityDef CEntityDef { get { return _CEntityDef; } set { _CEntityDef = value; } }
