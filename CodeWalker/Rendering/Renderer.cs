@@ -5,8 +5,8 @@ using SharpDX;
 using SharpDX.Direct3D11;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -97,6 +97,7 @@ namespace CodeWalker.Rendering
         public List<YmapEntityDef> VisibleMlos = new List<YmapEntityDef>();
 
         public rage__eLodType renderworldMaxLOD = rage__eLodType.LODTYPES_DEPTH_ORPHANHD;
+
         public float renderworldLodDistMult = 1.0f;
         public float renderworldDetailDistMult = 1.0f;
 
@@ -152,22 +153,31 @@ namespace CodeWalker.Rendering
         public Dictionary<DrawableGeometry, bool> SelectionGeometryDrawFlags = new Dictionary<DrawableGeometry, bool>();
         public bool SelectionFlagsTestAll = false; //to test all renderables for draw flags; for model form
 
-
-
-
         public List<RenderedDrawable> RenderedDrawables = new List<RenderedDrawable>(); //queued here for later hit tests...
         public List<RenderedBoundComposite> RenderedBoundComps = new List<RenderedBoundComposite>();
         public bool RenderedDrawablesListEnable = false; //whether or not to add rendered drawables to the list
         public bool RenderedBoundCompsListEnable = false; //whether or not to add rendered bound comps to the list
 
-
         private List<YtdFile> tryGetRenderableSDtxds = new List<YtdFile>();
         private List<YtdFile> tryGetRenderableHDtxds = new List<YtdFile>();
 
+        private Stopwatch frameTimer = new Stopwatch();
+        private long lastFrameTime;
+        private long totalFrameTime;
+        private int frameCount;
 
+        // Spatial partitioning
+        private SpatialGrid<YmapEntityDef> entitySpatialGrid = new SpatialGrid<YmapEntityDef>(200.0f);
+        private readonly List<YmapEntityDef> reusableVisibleEntities = new List<YmapEntityDef>(1024);
 
+        // Memory reuse
+        private readonly List<RenderableEntity> reusableRenderEntities = new List<RenderableEntity>(512);
+        private readonly List<YmapEntityDef> reusableWorldEntities = new List<YmapEntityDef>(512);
 
-
+        // LOD optimization
+        private const float MinLodDistMult = 0.5f;
+        private const float MaxLodDistMult = 2.0f;
+        private const float LodTransitionRange = 15.0f;
 
         public Renderer(DXForm form, GameFileCache cache)
         {
@@ -181,6 +191,9 @@ namespace CodeWalker.Rendering
 
             var s = Settings.Default;
             camera = new Camera(s.CameraSmoothing, s.CameraSensitivity, s.CameraFieldOfView);
+
+            // Initialize performance monitoring
+            frameTimer.Start();
         }
 
 
@@ -1631,6 +1644,13 @@ namespace CodeWalker.Rendering
         }
         public void RenderWorld(Dictionary<MetaHash, YmapFile> renderworldVisibleYmapDict, IEnumerable<Entity> spaceEnts)
         {
+            frameTimer.Restart();
+
+            // Clear reusable collections
+            reusableWorldEntities.Clear();
+            reusableRenderEntities.Clear();
+
+            // Existing processing logic
             renderworldentities.Clear();
             renderworldrenderables.Clear();
             VisibleYmaps.Clear();
@@ -1646,8 +1666,46 @@ namespace CodeWalker.Rendering
             }
             RenderWorldAdjustMapViewCamera();
 
+            // Optimized LOD calculations
+            foreach (var ent in LodManager.VisibleLeaves)
+            {
+                if (!RenderIsEntityFinalRender(ent))
+                    continue;
+
+                // Calculate LOD distance with clamping
+                ent.LodDist = CalculateLodDistance(ent, 1.0f);
+                ent.ChildLodDist = ent.LodDist * 1.5f;
+
+                reusableWorldEntities.Add(ent);
+            }
+
+            // Background loading of resources
+            Task.Run(() => LoadResourcesInBackground(reusableWorldEntities));
+
+            // Query visible entities
+            entitySpatialGrid.Query(camera.ViewFrustum, reusableVisibleEntities);
+
+            // Process visible entities
+            for (int i = 0; i < reusableVisibleEntities.Count; i++)
+            {
+                var ent = reusableVisibleEntities[i];
+
+                if (!RenderIsEntityFinalRender(ent))
+                    continue;
+
+                // LOD distance calculation with clamping
+                float lodThresholdFactor = MapViewEnabled ? 0.7f : 1.0f;
+                ent.LodDist = CalculateLodDistance(ent, lodThresholdFactor);
+                ent.ChildLodDist = ent.LodDist * 1.5f;
+
+                // Add to processing
+                reusableWorldEntities.Add(ent);
+            }
+
 
             LodManager.MaxLOD = renderworldMaxLOD;
+            renderworldLodDistMult = Math.Clamp(renderworldLodDistMult, 0.5f, 2.0f);
+            renderworldDetailDistMult = Math.Clamp(renderworldDetailDistMult, 0.5f, 2.0f);
             LodManager.LodDistMult = renderworldDetailDistMult;
             LodManager.MapViewEnabled = MapViewEnabled;
             LodManager.MapViewDist = camera.OrthographicSize / MapViewDetail;
@@ -1656,7 +1714,7 @@ namespace CodeWalker.Rendering
             LodManager.HDLightsEnabled = renderlights;
             LodManager.Update(renderworldVisibleYmapDict, camera, currentElapsedTime);
 
-            foreach (var updatelodlights in LodManager.UpdateLodLights)
+            foreach (var updatelodlights in LodManager.UpdateLodLights())
             {
                 renderableCache.InvalidateImmediate(updatelodlights);
             }
@@ -1717,14 +1775,8 @@ namespace CodeWalker.Rendering
                             RequiredParents[pent] = rndbl;
                         }
                     }
-
-
                 }
             }
-
-
-
-
 
             if (spaceEnts != null)
             {
@@ -1735,8 +1787,6 @@ namespace CodeWalker.Rendering
                     renderworldentities.Add(ae.EntityDef);
                 }
             }
-
-
 
             if (renderentities)
             {
@@ -1771,7 +1821,6 @@ namespace CodeWalker.Rendering
             }
 
 
-
             for (int i = 0; i < ents.Count; i++) //make sure to remove the renderable references to avoid hogging memory
             {
                 var ent = ents[i];
@@ -1788,8 +1837,52 @@ namespace CodeWalker.Rendering
                 }
             }
 
-
             RenderWorldYmapExtras();
+            lastFrameTime = frameTimer.ElapsedMilliseconds;
+            totalFrameTime += lastFrameTime;
+            frameCount++;
+
+        }
+
+        private float CalculateLodDistance(YmapEntityDef ent, float factor)
+        {
+            float baseDist = ent.Archetype?.LodDist ?? 100.0f;
+            float calculatedDist = baseDist * renderworldLodDistMult * factor;
+
+            // Apply clamping to prevent extreme values
+            return Math.Max(MinLodDistMult, Math.Min(calculatedDist, MaxLodDistMult));
+        }
+
+        private async Task LoadResourcesInBackgroundAsync(List<YmapEntityDef> entities)
+        {
+            const int MaxConcurrency = 8; // Optimal for disk I/O
+            var options = new ParallelOptions { MaxDegreeOfParallelism = MaxConcurrency };
+
+            await Parallel.ForEachAsync(entities, options, async (ent, ct) =>
+            {
+                if (ent?.Archetype == null) return;
+
+                // Get drawable with async status
+                var (drawable, waitingForLoad) = await gameFileCache.TryGetDrawableAsync(ent.Archetype);
+
+                if (waitingForLoad)
+                {
+                    // Handle partially loaded resource
+                    QueueForLaterLoading(ent);
+                    return;
+                }
+
+                if (drawable == null) return; // Resource not available
+
+                // Get renderable with entity context
+                var rndbl = TryGetRenderable(ent.Archetype, drawable, entity: ent);
+
+                if (rndbl != null && !rndbl.IsLoaded)
+                {
+                    // Queue for GPU processing
+                    renderableCache.GetRenderable(drawable);
+                }
+            });
         }
 
         public void RenderWorld_Orig(Dictionary<MetaHash, YmapFile> renderworldVisibleYmapDict, IEnumerable<Entity> spaceEnts)
@@ -1896,6 +1989,9 @@ namespace CodeWalker.Rendering
         }
         private void RenderWorldCalcEntityVisibility(YmapEntityDef ent)
         {
+            float lodThresholdFactor = MapViewEnabled ? 0.7f : 1.0f;
+            ent.LodDist = CalculateLodDistance(ent, lodThresholdFactor);
+            ent.ChildLodDist = ent.LodDist * 1.5f;
             float dist = (ent.Position - camera.Position).Length();
             if (MapViewEnabled)
             {
@@ -2233,7 +2329,7 @@ namespace CodeWalker.Rendering
 
 
 
-        private Renderable GetArchetypeRenderable(Archetype arch)
+        public Renderable GetArchetypeRenderable(Archetype arch)
         {
             if (arch == null) return null;
 
@@ -2812,7 +2908,7 @@ namespace CodeWalker.Rendering
             return true;
         }
 
-        public bool RenderArchetype(Archetype arche, YmapEntityDef entity, Renderable rndbl = null, bool cull = true, ClipMapEntry animClip = null)
+        private bool RenderArchetype(Archetype arche, YmapEntityDef entity, Renderable rndbl = null, bool cull = true, ClipMapEntry animClip = null)
         {
             //enqueue a single archetype for rendering.
 
@@ -2869,7 +2965,23 @@ namespace CodeWalker.Rendering
                     BoundingBoxes.Add(mb);
                 }
             }
+            float lodTransitionFactor = 0.0f;
+            if (usedynamiclod)
+            {
+                float lodNear = entity.LodDist - LodTransitionRange;
+                float lodFar = entity.LodDist + LodTransitionRange;
+                if (dist > lodNear && dist < lodFar)
+                {
+                    lodTransitionFactor = (dist - lodNear) / (lodFar - lodNear);
+                }
+                else if (dist >= lodFar)
+                {
+                    lodTransitionFactor = 1.0f;
+                }
 
+                // Pass to shader
+                shaders.SetLodTransitionAlpha(context, lodTransitionFactor);
+            }
 
 
             bool res = false;
@@ -3394,13 +3506,9 @@ namespace CodeWalker.Rendering
 
         }
 
-
-
-
-
-
-
-        private Renderable TryGetRenderable(Archetype arche, DrawableBase drawable, uint txdHash = 0, TextureDictionary txdExtra = null, Texture diffOverride = null)
+        private Renderable TryGetRenderable(Archetype arche, DrawableBase drawable, uint txdHash = 0,
+                                            TextureDictionary txdExtra = null, Texture diffOverride = null,
+                                            YmapEntityDef entity = null)
         {
             if (drawable == null) return null;
             //BUG: only last texdict used!! needs to cache textures per archetype........
@@ -3408,6 +3516,11 @@ namespace CodeWalker.Rendering
             MetaHash texDict = txdHash;
             //uint texDictOrig = txdHash;
             uint clipDict = 0;
+            bool useHDTextures = false;
+            if (entity != null)
+            {
+                useHDTextures = entity.Distance < 150.0f && renderhdtextures;
+            }
 
             if (arche != null)
             {
@@ -3693,15 +3806,15 @@ namespace CodeWalker.Rendering
                 }
             }
 
-
             rndbl.AllTexturesLoaded = alltexsloaded;
-
-
             return rndbl;
         }
 
-
-
+        public string GetPerformanceStats()
+        {
+            double avgFrameTime = frameCount > 0 ? totalFrameTime / (double)frameCount : 0;
+            return $"FPS: {fps} | Avg Frame: {avgFrameTime:0.00}ms | Entities: {reusableVisibleEntities.Count}";
+        }
 
     }
 
@@ -3722,6 +3835,57 @@ namespace CodeWalker.Rendering
     {
         public Renderable Renderable;
         public YmapEntityDef Entity;
+    }
+    public class SpatialGrid<T>
+    {
+        private readonly float cellSize;
+        private readonly Dictionary<long, List<T>> cells = new Dictionary<long, List<T>>();
+        private readonly List<long> activeCells = new List<long>();
+
+        public SpatialGrid(float cellSize)
+        {
+            this.cellSize = cellSize;
+        }
+
+        public void Clear()
+        {
+            cells.Clear();
+            activeCells.Clear();
+        }
+
+        public void Insert(T item, Vector3 position)
+        {
+            long cellKey = GetCellKey(position);
+            if (!cells.TryGetValue(cellKey, out var cellList))
+            {
+                cellList = new List<T>();
+                cells.Add(cellKey, cellList);
+            }
+            cellList.Add(item);
+            if (!activeCells.Contains(cellKey))
+                activeCells.Add(cellKey);
+        }
+
+        public void Query(Frustum frustum, List<T> results)
+        {
+            results.Clear();
+            foreach (var cellKey in activeCells)
+            {
+                var cellList = cells[cellKey];
+                foreach (var item in cellList)
+                {
+                    // Simplified - should do actual frustum check
+                    results.Add(item);
+                }
+            }
+        }
+
+        private long GetCellKey(Vector3 position)
+        {
+            int x = (int)(position.X / cellSize);
+            int y = (int)(position.Y / cellSize);
+            return ((long)x << 32) | (uint)y;
+        }
     }
 
 
@@ -3762,6 +3926,7 @@ namespace CodeWalker.Rendering
 
     public class RenderLodManager
     {
+        public Renderer Renderer;
         public rage__eLodType MaxLOD = rage__eLodType.LODTYPES_DEPTH_ORPHANHD;
         public float LodDistMult = 1.0f;
         public bool MapViewEnabled = false;
@@ -3770,273 +3935,352 @@ namespace CodeWalker.Rendering
         public bool HDLightsEnabled = true;
         public bool LODLightsEnabled = true;
 
-        public Camera Camera = null;
-        public Vector3 Position = Vector3.Zero;
+        public Camera Camera;
+        public Vector3 Position;
 
-        public Dictionary<MetaHash, YmapFile> CurrentYmaps = new Dictionary<MetaHash, YmapFile>();
-        private List<MetaHash> RemoveYmaps = new List<MetaHash>();
-        public Dictionary<YmapEntityDef, YmapEntityDef> RootEntities = new Dictionary<YmapEntityDef, YmapEntityDef>();
-        public List<YmapEntityDef> VisibleLeaves = new List<YmapEntityDef>();
+        private readonly Dictionary<MetaHash, YmapFile> currentYmaps = new();
+        private readonly List<MetaHash> toRemove = new();
+        private readonly Dictionary<YmapEntityDef, YmapEntityDef> rootEntities = new();
+        private readonly List<YmapEntityDef> visibleLeaves = new();
+        private readonly Dictionary<uint, YmapLODLight> lodLights = new();
 
-        public Dictionary<uint, YmapLODLight> LodLightsDict = new Dictionary<uint, YmapLODLight>();
-        public HashSet<YmapEntityDef.LightInstance> VisibleLights = new HashSet<YmapEntityDef.LightInstance>();
-        public HashSet<YmapEntityDef.LightInstance> VisibleLightsPrev = new HashSet<YmapEntityDef.LightInstance>();
-        public HashSet<YmapLODLights> UpdateLodLights = new HashSet<YmapLODLights>();
+        private readonly HashSet<YmapEntityDef.LightInstance> visibleLights = new();
+        private readonly HashSet<YmapEntityDef.LightInstance> prevVisibleLights = new();
+        private readonly HashSet<YmapLODLights> updateLodLights = new();
 
-        public void Update(Dictionary<MetaHash, YmapFile> ymaps, Camera camera, float elapsed)
+        // Thread-local buffers so we can traverse in parallel safely
+        private readonly ThreadLocal<List<YmapEntityDef>> localLeaves =
+            new(() => new List<YmapEntityDef>(256));
+        private readonly ThreadLocal<HashSet<YmapEntityDef.LightInstance>> localLights =
+            new(() => new HashSet<YmapEntityDef.LightInstance>());
+
+        // Public accessors (compat: both names)
+        public List<YmapEntityDef> VisibleLeaves => visibleLeaves;
+        public List<YmapEntityDef> VisibleLeavesList => visibleLeaves;
+
+        /// <summary>
+        /// Back-compat overload: builds frustum from the provided camera.
+        /// This fixes CS7036 at call sites that pass only (ymaps, cam, elapsed).
+        /// </summary>
+        public void Update(Dictionary<MetaHash, YmapFile> allYmaps, Camera cam, float elapsed)
         {
-            Camera = camera;
-            Position = camera.Position;
+            // Camera.ViewFrustum is a CodeWalker.World.Frustum
+            Update(allYmaps, cam, elapsed, cam.ViewFrustum);
+        }
 
-            foreach (var kvp in ymaps)
+        /// <summary>
+        /// Main update loop (parallel), using a precomputed Frustum.
+        /// </summary>
+        public void Update(Dictionary<MetaHash, YmapFile> allYmaps, Camera cam, float elapsed, Frustum frustum)
+        {
+            Camera = cam;
+            Position = cam.Position;
+
+            SyncYmapsHierarchy(allYmaps);
+            RemoveUnusedYmaps(allYmaps);
+            AddNewYmaps(allYmaps);
+
+            visibleLeaves.Clear();
+            visibleLights.Clear();
+
+            // Parallel traversal across roots
+            Parallel.ForEach(rootEntities.Keys, root =>
             {
+                var leaves = localLeaves.Value;
+                var lights = localLights.Value;
+                leaves.Clear();
+                lights.Clear();
+
+                TraverseEntityIterative(root, 1f, frustum, leaves, lights);
+
+                lock (visibleLeaves)
+                    visibleLeaves.AddRange(leaves);
+
+                lock (visibleLights)
+                    foreach (var l in lights) visibleLights.Add(l);
+            });
+
+            UpdateLodLights();
+            SwapVisibleLightSets();
+        }
+
+        /// <summary>Public so you can call it externally as needed.</summary>
+        public HashSet<YmapLODLights> UpdateLodLights()
+        {
+            if (!LODLightsEnabled) return new HashSet<YmapLODLights>();
+
+            updateLodLights.Clear();
+
+            // New visible this frame -> disable LOD lights chunk
+            foreach (var light in visibleLights)
+            {
+                if (!prevVisibleLights.Contains(light)
+                    && lodLights.TryGetValue(light.Hash, out var lod))
+                {
+                    lod.Enabled = false;
+                    updateLodLights.Add(lod.LodLights);
+                }
+            }
+
+            // No longer visible -> enable LOD lights chunk
+            foreach (var light in prevVisibleLights)
+            {
+                if (!visibleLights.Contains(light)
+                    && lodLights.TryGetValue(light.Hash, out var lod))
+                {
+                    lod.Enabled = true;
+                    updateLodLights.Add(lod.LodLights);
+                }
+            }
+            return updateLodLights;
+        }
+
+        private void SwapVisibleLightSets()
+        {
+            prevVisibleLights.Clear();
+            foreach (var l in visibleLights) prevVisibleLights.Add(l);
+            visibleLights.Clear();
+        }
+
+        private void SyncYmapsHierarchy(Dictionary<MetaHash, YmapFile> ymaps)
+        {
+            foreach (var ymap in ymaps.Values)
+            {
+                if (ymap._CMapData.parent != 0 &&
+                    ymaps.TryGetValue(ymap._CMapData.parent, out var parent) &&
+                    ymap.Parent != parent)
+                {
+                    ymap.ConnectToParent(parent);
+                }
+            }
+        }
+
+        private void RemoveUnusedYmaps(Dictionary<MetaHash, YmapFile> ymaps)
+        {
+            toRemove.Clear();
+            foreach (var kvp in currentYmaps)
+            {
+                var key = kvp.Key;
                 var ymap = kvp.Value;
-                if (ymap._CMapData.parent != 0) //ensure parent references on ymaps
+                if (!ymaps.TryGetValue(key, out var current) ||
+                    current != ymap ||
+                    (ymap.IsScripted && !ShowScriptedYmaps) ||
+                    ymap.LodManagerUpdate)
                 {
-                    ymaps.TryGetValue(ymap._CMapData.parent, out YmapFile pymap);
-                    if (pymap == null) //skip adding ymaps until parents are available
-                    { continue; }
-                    if (ymap.Parent != pymap)
-                    {
-                        ymap.ConnectToParent(pymap);
-                    }
+                    toRemove.Add(key);
                 }
             }
 
-            RemoveYmaps.Clear();
-            foreach (var kvp in CurrentYmaps)
+            foreach (var key in toRemove)
             {
-                YmapFile ymap = null;
-                if (!ymaps.TryGetValue(kvp.Key, out ymap) || (ymap != kvp.Value) || (ymap.IsScripted && !ShowScriptedYmaps) || (ymap.LodManagerUpdate))
+                var ymap = currentYmaps[key];
+                currentYmaps.Remove(key);
+
+                var ents = ymap.LodManagerOldEntities ?? ymap.AllEntities;
+                if (ents != null)
                 {
-                    RemoveYmaps.Add(kvp.Key);
-                }
-            }
-            foreach (var remYmap in RemoveYmaps)
-            {
-                var ymap = CurrentYmaps[remYmap];
-                CurrentYmaps.Remove(remYmap);
-                var remEnts = ymap.LodManagerOldEntities ?? ymap.AllEntities;
-                if (remEnts != null)    // remove this ymap's entities from the tree.....
-                {
-                    for (int i = 0; i < remEnts.Length; i++)
+                    foreach (var ent in ents)
                     {
-                        var ent = remEnts[i];
-                        RootEntities.Remove(ent);
+                        rootEntities.Remove(ent);
                         ent.LodManagerChildren?.Clear();
                         ent.LodManagerChildren = null;
-                        ent.LodManagerRenderable = null;
-                        if ((ent.Parent != null) && (ent.Parent.Ymap != ymap))
+                        if (ent.Parent != null && ent.Parent.Ymap != ymap)
                         {
                             ent.Parent.LodManagerRemoveChild(ent);
                         }
                     }
                 }
-                var remLodLights = ymap.LODLights?.LodLights;
-                if (remLodLights != null)
+
+                if (ymap.LODLights?.LodLights != null)
                 {
-                    for (int i = 0; i < remLodLights.Length; i++)
+                    foreach (var l in ymap.LODLights.LodLights)
                     {
-                        LodLightsDict.Remove(remLodLights[i].Hash);
+                        lodLights.Remove(l.Hash);
                     }
                 }
+
                 ymap.LodManagerUpdate = false;
                 ymap.LodManagerOldEntities = null;
             }
+        }
+
+        private void AddNewYmaps(Dictionary<MetaHash, YmapFile> ymaps)
+        {
             foreach (var kvp in ymaps)
             {
+                var hash = kvp.Key;
                 var ymap = kvp.Value;
-                if (ymap.IsScripted && !ShowScriptedYmaps)
-                { continue; }
-                if ((ymap._CMapData.parent != 0) && (ymap.Parent == null)) //skip adding ymaps until parents are available
-                { continue; }
-                if (!CurrentYmaps.ContainsKey(kvp.Key))
+
+                if (currentYmaps.ContainsKey(hash)) continue;
+                if (ymap.IsScripted && !ShowScriptedYmaps) continue;
+                if (ymap._CMapData.parent != 0 && ymap.Parent == null) continue;
+
+                currentYmaps[hash] = ymap;
+
+                if (ymap.AllEntities != null)
                 {
-                    CurrentYmaps.Add(kvp.Key, kvp.Value);
-                    if (ymap.AllEntities != null)    // add this ymap's entities to the tree...
+                    foreach (var ent in ymap.AllEntities)
                     {
-                        for (int i = 0; i < ymap.AllEntities.Length; i++)
-                        {
-                            var ent = ymap.AllEntities[i];
-                            if (ent.Parent != null)
-                            {
-                                ent.Parent.LodManagerAddChild(ent);
-                            }
-                            else
-                            {
-                                RootEntities[ent] = ent;
-                            }
-                        }
-                    }
-                    var addLodLights = ymap.LODLights?.LodLights;
-                    if (addLodLights != null)
-                    {
-                        for (int i = 0; i < addLodLights.Length; i++)
-                        {
-                            var light = addLodLights[i];
-                            LodLightsDict[light.Hash] = light;
-                        }
+                        if (ent.Parent != null)
+                            ent.Parent.LodManagerAddChild(ent);
+                        else
+                            rootEntities[ent] = ent;
                     }
                 }
-            }
 
-
-            VisibleLeaves.Clear();
-            VisibleLights.Clear();
-            foreach (var kvp in RootEntities)
-            {
-                var ent = kvp.Key;
-                if (EntityVisibleAtMaxLodLevel(ent))
+                if (ymap.LODLights?.LodLights != null)
                 {
-                    ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
-                    if (ent.Distance <= (ent.LodDist * LodDistMult))
+                    foreach (var l in ymap.LODLights.LodLights)
                     {
-                        RecurseAddVisibleLeaves(ent);
-                    }
-                }
-            }
-
-            UpdateLodLights.Clear();
-            foreach (var light in VisibleLights)
-            {
-                if (VisibleLightsPrev.Contains(light) == false)
-                {
-                    if (LodLightsDict.TryGetValue(light.Hash, out var lodlight))
-                    {
-                        lodlight.Enabled = false;
-                        UpdateLodLights.Add(lodlight.LodLights);
-                    }
-                }
-            }
-            foreach (var light in VisibleLightsPrev)
-            {
-                if (VisibleLights.Contains(light) == false)
-                {
-                    if (LodLightsDict.TryGetValue(light.Hash, out var lodlight))
-                    {
-                        lodlight.Enabled = true;
-                        UpdateLodLights.Add(lodlight.LodLights);
-                    }
-                }
-            }
-
-
-            var vl = VisibleLights;
-            VisibleLights = VisibleLightsPrev;
-            VisibleLightsPrev = vl;
-        }
-
-        private void RecurseAddVisibleLeaves(YmapEntityDef ent)
-        {
-            var clist = GetEntityChildren(ent);
-            if (clist != null)
-            {
-                var cnode = clist.First;
-                while (cnode != null)
-                {
-                    RecurseAddVisibleLeaves(cnode.Value);
-                    cnode = cnode.Next;
-                }
-            }
-            else
-            {
-                if (EntityVisible(ent))
-                {
-                    VisibleLeaves.Add(ent);
-
-                    if (HDLightsEnabled && (ent.Lights != null))
-                    {
-                        for (int i = 0; i < ent.Lights.Length; i++)
-                        {
-                            VisibleLights.Add(ent.Lights[i]);
-                        }
+                        lodLights[l.Hash] = l;
                     }
                 }
             }
         }
 
-
-
-        private LinkedList<YmapEntityDef> GetEntityChildren(YmapEntityDef ent)
+        private void TraverseEntityIterative(
+    YmapEntityDef root, float inheritedFade, Frustum frustum,
+    List<YmapEntityDef> leaves,
+    HashSet<YmapEntityDef.LightInstance> lights)
         {
-            //get the children list for this entity, if all the hcildren are available, and they are within range
-            if (!EntityChildrenVisibleAtMaxLodLevel(ent)) return null;
-            var clist = ent.LodManagerChildren;
-            if ((clist != null) && (clist.Count >= ent._CEntityDef.numChildren))
+            var stack = new Stack<(YmapEntityDef ent, float fade)>();
+            stack.Push((root, inheritedFade));
+
+            while (stack.Count > 0)
             {
-                if (ent.Parent != null)//already calculated root entities distance
+                var (ent, fade) = stack.Pop();
+                if (!IsEntityAllowedAtMaxLOD(ent)) continue;
+
+                ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
+
+                // Null check for LodManagerChildren
+                bool hasChildren = ent.LodManagerChildren != null && ent.LodManagerChildren.Count > 0;
+                float childDist = hasChildren ? GetChildLodDist(ent) : 0;
+
+                // PRELOAD MODELS WHEN NEAR TRANSITION ZONE
+                if (hasChildren && ent.Distance < childDist * 2.0f)
                 {
-                    ent.Distance = MapViewEnabled ? MapViewDist : (ent.Position - Position).Length();
-                }
-                if (ent.Distance <= (ent.ChildLodDist * LodDistMult))
-                {
-                    return clist;
-                }
-                else
-                {
-                    var cnode = clist.First;
-                    while (cnode != null)
+                    foreach (var child in ent.LodManagerChildren)
                     {
-                        var child = cnode.Value;
-                        child.Distance = MapViewEnabled ? MapViewDist : (child.Position - Position).Length();
-                        if (child.Distance <= (child.LodDist * LodDistMult))
-                        {
-                            return clist;
-                        }
-                        cnode = cnode.Next;
+                        // Trigger async load if not already started
+                        Renderer.GetArchetypeRenderable(child.Archetype);
                     }
                 }
+
+                if (!IsVisible(ent, frustum)) continue;
+
+                float fadeZone = childDist * 0.2f;
+                float dist = ent.Distance;
+
+                bool inChild = hasChildren && dist < childDist - fadeZone;
+                bool inFade = hasChildren && dist >= childDist - fadeZone && dist <= childDist + fadeZone;
+
+                bool parentReady = Renderer.GetArchetypeRenderable(ent.Archetype) != null;
+                bool childrenReady = hasChildren && AreChildrenRenderable(ent);
+
+                // FALLBACK RENDERING WHEN MODELS AREN'T READY
+                if (inFade)
+                {
+                    float start = childDist - fadeZone, end = childDist + fadeZone;
+                    float parentFade = Math.Clamp((dist - start) / (end - start), 0f, 1f);
+                    float childFade = 1f - parentFade;
+
+                    if (parentReady && childrenReady)
+                    {
+                        AddEntity(ent, parentFade * fade, leaves, lights);
+                        foreach (var node in ent.LodManagerChildren)
+                            stack.Push((node, childFade * fade));
+                    }
+                    else if (parentReady || ent.LastRenderable != null)
+                    {
+                        // Fallback to parent if available
+                        AddEntity(ent, fade, leaves, lights);
+                    }
+                    else if (childrenReady)
+                    {
+                        // Fallback to children
+                        foreach (var node in ent.LodManagerChildren)
+                            stack.Push((node, fade));
+                    }
+                }
+                else if (inChild)
+                {
+                    if (childrenReady || !parentReady)
+                    {
+                        foreach (var node in ent.LodManagerChildren)
+                            stack.Push((node, fade));
+                    }
+                    else
+                    {
+                        AddEntity(ent, fade, leaves, lights);  // Fallback to parent
+                    }
+                }
+                else // in parent
+                {
+                    if (parentReady || !childrenReady || !hasChildren)
+                    {
+                        AddEntity(ent, fade, leaves, lights);
+                    }
+                    else
+                    {
+                        foreach (var node in ent.LodManagerChildren)
+                            stack.Push((node, fade));  // Fallback to children
+                    }
+                }
+
+                // Track last renderable state for fallback
+                if (parentReady) ent.LastRenderable = ent;
             }
-            return null;
         }
 
-        private bool EntityVisible(YmapEntityDef ent)
+        private void AddEntity(
+            YmapEntityDef ent,
+            float fade,
+            List<YmapEntityDef> leaves,
+            HashSet<YmapEntityDef.LightInstance> lights)
         {
-            if (MapViewEnabled)
+            ent.LodFade = fade;
+            leaves.Add(ent);
+
+            if (HDLightsEnabled && ent.Lights != null)
             {
-                return Camera.ViewFrustum.ContainsAABBNoFrontClipNoOpt(ref ent.BBMin, ref ent.BBMax);
-            }
-            else
-            {
-                return Camera.ViewFrustum.ContainsAABBNoClip(ref ent.BBCenter, ref ent.BBExtent);
+                foreach (var l in ent.Lights)
+                    lights.Add(l);
             }
         }
-        private bool EntityVisibleAtMaxLodLevel(YmapEntityDef ent)
+
+        private bool IsVisible(YmapEntityDef ent, Frustum frustum)
         {
-            if (MaxLOD != rage__eLodType.LODTYPES_DEPTH_ORPHANHD)
+            return MapViewEnabled
+                ? frustum.ContainsAABBNoFrontClipNoOpt(ref ent.BBMin, ref ent.BBMax)
+                : frustum.ContainsAABBNoClip(ref ent.BBCenter, ref ent.BBExtent);
+        }
+
+        private bool IsEntityAllowedAtMaxLOD(YmapEntityDef ent)
+        {
+            if (MaxLOD == rage__eLodType.LODTYPES_DEPTH_ORPHANHD) return true;
+            var lvl = ent._CEntityDef.lodLevel;
+            return lvl != rage__eLodType.LODTYPES_DEPTH_ORPHANHD && lvl > MaxLOD;
+        }
+
+        private bool AreChildrenRenderable(YmapEntityDef ent)
+        {
+            if (ent.LodManagerChildren == null) return false;
+
+            foreach (var node in ent.LodManagerChildren)
             {
-                if ((ent._CEntityDef.lodLevel == rage__eLodType.LODTYPES_DEPTH_ORPHANHD) ||
-                    (ent._CEntityDef.lodLevel < MaxLOD))
-                {
+                if (Renderer.GetArchetypeRenderable(node.Archetype) == null)
                     return false;
-                }
             }
             return true;
         }
-        private bool EntityChildrenVisibleAtMaxLodLevel(YmapEntityDef ent)
+        private float GetChildLodDist(YmapEntityDef ent)
         {
-            if (MaxLOD != rage__eLodType.LODTYPES_DEPTH_ORPHANHD)
+            if (ent._CEntityDef.childLodDist > 0)
             {
-                if ((ent._CEntityDef.lodLevel == rage__eLodType.LODTYPES_DEPTH_ORPHANHD) ||
-                    (ent._CEntityDef.lodLevel <= MaxLOD))
-                {
-                    return false;
-                }
+                return ent._CEntityDef.childLodDist * LodDistMult;
             }
-            return true;
+            return (ent.Archetype?.LodDist ?? 200.0f) * LodDistMult;
         }
-
-
     }
-
-
-
-
-
-
-
-
-
-
-
 }

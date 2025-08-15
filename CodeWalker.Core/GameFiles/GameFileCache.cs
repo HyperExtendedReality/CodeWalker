@@ -2671,13 +2671,6 @@ namespace CodeWalker.GameFiles
             return tex;
         }
 
-
-
-
-
-
-
-
         public Task<(DrawableBase drawable, bool waitingForLoad)> TryGetDrawableAsync(Archetype arche)
         {
             return Task.Run(() =>
@@ -2721,14 +2714,6 @@ namespace CodeWalker.GameFiles
         }
 
 
-
-
-
-
-
-
-
-
         private string[] GetExcludePaths()
         {
             string[] exclpaths = ExcludeFolders.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
@@ -2745,11 +2730,6 @@ namespace CodeWalker.GameFiles
             }
             return exclpaths;
         }
-
-
-
-
-
 
 
         public void TestAudioRels()
@@ -2775,8 +2755,6 @@ namespace CodeWalker.GameFiles
 
                         RelFile rel = new RelFile(rfe);
                         RpfMan.LoadFile(rel, rfe);
-
-
 
                         byte[] data;
 
